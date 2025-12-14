@@ -70,25 +70,27 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
   </div>
 </div>
 
+<!-- ✅ SUCCESS SOUND -->
+<audio id="successSound" preload="auto">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" type="audio/mpeg">
+</audio>
+
 <script>
 /* ================= GAME DATA ================= */
 
-const gameState={
-currentRoom:0,hintsUsed:0,solved:new Set(),evidence:new Set(),
-timeRemaining:0,timer:null,
-roomFlags:{}
-};
+const gameState={currentRoom:0,hintsUsed:0,solved:new Set(),evidence:new Set(),
+timeRemaining:0,timer:null,roomFlags:{}};
 
 const rooms=[
 {
 title:"Room 1: The Crime Scene",
 timeLimit:180,
-story:"A precious diamond has been stolen from the museum . Investigate visual clues.",
+story:"A diamond vanished. Investigate visual clues.",
 visualClues:[
 {emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
 {emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
 {emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
-{emoji:"📊",label:"Security Log",description:"Digital record showing the access time"}
+{emoji:"📊",label:"Security Log",description:"Access recorded at 15:30"}
 ],
 puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
 evidence:"Security Log Extract"
@@ -186,6 +188,11 @@ const m=document.getElementById("message");
 if(v===r.puzzle.answer){
 m.className="message success";
 m.textContent="Correct!";
+
+// 🔊 Play success sound
+const sound = document.getElementById("successSound");
+if(sound){sound.currentTime=0; sound.play().catch(()=>{});}
+
 gameState.solved.add(gameState.currentRoom);
 gameState.evidence.add(r.evidence);
 setTimeout(nextRoom,800);
@@ -204,44 +211,50 @@ loadRoom(gameState.currentRoom+1);
 /* ================= UV MECHANIC ================= */
 
 function openImageModal(idx){
-const roomIndex=gameState.currentRoom;
-const clue=rooms[roomIndex].visualClues[idx];
-const flags=gameState.roomFlags[roomIndex];
+    const roomIndex = gameState.currentRoom;
+    const clue = rooms[roomIndex].visualClues[idx];
+    const flags = gameState.roomFlags[roomIndex];
 
-document.getElementById("modalImage").textContent=clue.emoji;
-const desc=document.getElementById("modalDescription");
-const actions=document.getElementById("modalActions");
-actions.innerHTML="";
+    document.getElementById("modalImage").textContent = clue.emoji;
+    const desc = document.getElementById("modalDescription");
+    const actions = document.getElementById("modalActions");
+    actions.innerHTML = "";
 
-if(roomIndex===0 && clue.label==="Note Found"){
-if(flags.noteRevealed){
-desc.innerHTML="<strong>Revealed note:</strong> Meet at 15:30";
-}else if(flags.uvCooldown>0){
-desc.innerHTML=`${clue.description}<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
-}else{
-desc.textContent=clue.description;
-const btn=document.createElement("button");
-btn.textContent="Inspect with UV Lamp";
-btn.onclick=()=>startUV(roomIndex);
-actions.appendChild(btn);
-}
-}else{
-desc.textContent=clue.description;
-}
+    if(roomIndex === 0 && clue.label === "Note Found"){
+        if(flags.noteRevealed){
+            desc.innerHTML = "<strong>Revealed note:</strong> Meet at 15:30";
+        } else if(flags.uvCooldown > 0){
+            desc.innerHTML = `${clue.description}<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
+        } else {
+            desc.textContent = clue.description;
+            const btn = document.createElement("button");
+            btn.textContent = "Inspect with UV Lamp";
+            btn.onclick = () => startUV(roomIndex);
+            actions.appendChild(btn);
+        }
+    } else {
+        desc.textContent = clue.description;
+    }
 
-document.getElementById("imageModal").classList.add("active");
+    document.getElementById("imageModal").classList.add("active");
 }
 
 function startUV(roomIndex){
-const flags=gameState.roomFlags[roomIndex];
-flags.uvCooldown=90;
-flags.uvInterval=setInterval(()=>{
-flags.uvCooldown--;
-if(flags.uvCooldown<=0){
-clearInterval(flags.uvInterval);
-flags.noteRevealed=true;
-}
-},1000);
+    const flags = gameState.roomFlags[roomIndex];
+    flags.uvCooldown = 120; // 2 minutes
+    const desc = document.getElementById("modalDescription");
+    const actions = document.getElementById("modalActions");
+    actions.innerHTML = ""; // remove button during warm-up
+
+    flags.uvInterval = setInterval(() => {
+        flags.uvCooldown--;
+        desc.innerHTML = `UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
+        if(flags.uvCooldown <= 0){
+            clearInterval(flags.uvInterval);
+            flags.noteRevealed = true;
+            desc.innerHTML = "<strong>Revealed note:</strong> Meet at 15:30";
+        }
+    }, 1000);
 }
 
 function closeImageModal(){
@@ -281,6 +294,11 @@ const accepted=["internet lab","the internet lab","internetlab","internet-lab"];
 if(accepted.includes(v)){
 m.className="message success";
 m.textContent="✅ Correct! This is the Internet Lab.";
+
+// 🔊 Play success sound
+const sound = document.getElementById("successSound");
+if(sound){sound.currentTime=0; sound.play().catch(()=>{});}
+
 document.getElementById("riddleInput").disabled=true;
 }else{
 m.className="message error";
@@ -308,4 +326,5 @@ loadRoom(0);
 
 </body>
 </html>
+
 
