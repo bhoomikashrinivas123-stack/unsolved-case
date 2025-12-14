@@ -1,717 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Unsolved Case - Escape Room</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: #e0e0e0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      width: 100%;
-      max-width: 1000px;
-      background: #0f3460;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-      overflow: hidden;
-      display: grid;
-      grid-template-columns: 1fr 300px;
-    }
-    .main-content { padding: 40px; min-height: 600px; display: flex; flex-direction: column; }
-    .sidebar { background: #0a1e35; padding: 30px 20px; border-left: 2px solid #e94560; overflow-y: auto; max-height: 600px; }
-    header { margin-bottom: 30px; border-bottom: 2px solid #e94560; padding-bottom: 15px; }
-    h1 { color: #e94560; font-size: 28px; margin-bottom: 5px; }
-    .room-title { color: #16c784; font-size: 18px; font-weight: 600; }
-    .game-info { display: flex; gap: 20px; margin-top: 10px; font-size: 14px; }
-    .info-item { display: flex; align-items: center; gap: 8px; }
-    .info-label { color: #94a3b8; font-weight: 600; }
-    .info-value { color: #16c784; font-weight: 700; }
-    .room-content { flex: 1; }
-    .clues { background: rgba(233,69,96,0.1); padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #e94560; }
-    .clues h3 { color: #16c784; margin-bottom: 15px; font-size: 16px; }
-    .clue-item { background: rgba(255,255,255,0.05); padding: 12px; margin-bottom: 10px; border-radius: 6px; border-left: 3px solid #16c784; font-size: 14px; line-height: 1.5; }
-    .visual-clues { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; }
-    .clue-image { background: rgba(255,255,255,0.1); border: 2px solid #16c784; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.3s; height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-    .clue-image:hover { border-color: #e94560; background: rgba(233,69,96,0.15); transform: scale(1.05); }
-    .clue-image-content { font-size: 80px; margin-bottom: 10px; }
-    .clue-image-label { font-size: 12px; color: #94a3b8; font-weight: 600; }
-    .image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
-    .image-modal.active { display: flex; }
-    .modal-content { max-width: 600px; max-height: 80vh; position: relative; background: #0f3460; padding: 30px; border-radius: 12px; border: 2px solid #e94560; text-align: center; overflow:auto; }
-    .modal-close { position: absolute; top: 15px; right: 15px; background: #e94560; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 20px; }
-    .modal-image { font-size: 200px; margin: 20px 0; }
-    .modal-description { font-size: 16px; line-height: 1.6; color: #e0e0e0; }
-    .puzzle-section { background: rgba(22,199,132,0.1); padding: 20px; border-radius: 8px; border-left: 4px solid #16c784; }
-    .puzzle-section h3 { color: #16c784; margin-bottom: 15px; font-size: 16px; }
-    .puzzle-question { margin-bottom: 15px; font-size: 15px; line-height: 1.6; }
-    .input-group { display: flex; gap: 10px; margin-top: 15px; }
-    input[type="text"], input[type="number"] { flex: 1; padding: 12px; border: 2px solid #16c784; background: rgba(22,199,132,0.1); color: #e0e0e0; border-radius: 6px; font-size: 14px; transition: border-color 0.3s; }
-    input[type="text"]:focus, input[type="number"]:focus { outline: none; border-color: #e94560; background: rgba(233,69,96,0.1); }
-    button { padding: 12px 20px; background: #e94560; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 14px; }
-    button:hover { background: #d63850; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(233,69,96,0.3); }
-    .hint-btn { background: #16c784; width: 100%; margin-top: 10px; }
-    .hint-btn:hover { background: #12a870; }
-    .message { margin-top: 15px; padding: 12px; border-radius: 6px; font-size: 14px; text-align: center; font-weight: 600; }
-    .message.success { background: rgba(22,199,132,0.2); color: #16c784; border: 2px solid #16c784; }
-    .message.error { background: rgba(233,69,96,0.2); color: #e94560; border: 2px solid #e94560; }
-    .sidebar h3 { color: #16c784; font-size: 16px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e94560; }
-    .sidebar-section { margin-bottom: 25px; }
-    .progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
-    .progress-fill { height: 100%; background: #16c784; width: 0%; transition: width 0.3s; }
-    .evidence-list { font-size: 13px; line-height: 2; }
-    .evidence-item { padding: 8px; background: rgba(22,199,132,0.1); margin-bottom: 8px; border-radius: 4px; border-left: 3px solid #16c784; }
-    .evidence-item.collected { color: #16c784; }
-    .evidence-item.locked { color: #94a3b8; opacity: 0.6; }
-    .final-screen { text-align: center; padding: 40px; }
-    .final-screen h2 { color: #16c784; font-size: 32px; margin-bottom: 20px; }
-    .timer { background: rgba(233,69,96,0.2); border: 2px solid #e94560; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 24px; font-weight: 700; color: #e94560; font-family: 'Courier New', monospace; }
-    .timer.warning { background: rgba(233,69,96,0.4); animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.7;} }
-    @media (max-width: 768px) {
-      .container { grid-template-columns: 1fr; }
-      .sidebar { border-left: none; border-top: 2px solid #e94560; max-height: none; }
-      .main-content { padding: 20px; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Unsolved Case</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;
+background:linear-gradient(135deg,#1a1a2e,#16213e);
+color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px
+}
+.container{max-width:1100px;width:100%;background:#0f3460;border-radius:12px;
+display:grid;grid-template-columns:1fr 300px;overflow:hidden}
+.main-content{padding:30px}
+.sidebar{background:#0a1e35;padding:20px;border-left:2px solid #e94560}
+h1{color:#e94560}
+.room-title{color:#16c784;margin:10px 0}
+.visual-clues{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:15px;margin-top:15px}
+.clue-image{
+background:rgba(255,255,255,.1);border:2px solid #16c784;border-radius:8px;
+height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+cursor:pointer;transition:.2s
+}
+.clue-image:hover{border-color:#e94560;transform:scale(1.05)}
+.timer{
+border:2px solid #e94560;padding:12px;border-radius:8px;text-align:center;
+font-family:monospace;font-size:22px;margin-bottom:15px
+}
+input{padding:10px;border-radius:6px;border:2px solid #16c784;background:transparent;color:#fff;width:100%}
+button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius:6px;cursor:pointer;margin-top:10px}
+.message.success{color:#16c784}
+.message.error{color:#e94560}
+.image-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);align-items:center;justify-content:center}
+.image-modal.active{display:flex}
+.modal-content{background:#0f3460;padding:30px;border-radius:10px;text-align:center;max-width:500px}
+.modal-close{position:absolute;top:10px;right:10px}
+.evidence-item{margin-bottom:6px;font-size:14px}
+</style>
 </head>
+
 <body>
-  <div class="container" id="gameContainer">
-    <div class="main-content">
-      <header>
-        <h1>🔍 The Unsolved Case</h1>
-        <p class="room-title" id="roomTitle">Room 1: The Crime Scene</p>
-        <div class="game-info">
-          <div class="info-item">
-            <span class="info-label">Room:</span>
-            <span class="info-value" id="roomNumber">1/3</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Hints Used:</span>
-            <span class="info-value" id="hintsUsed">0</span>
-          </div>
-        </div>
-      </header>
 
-      <div class="room-content" id="roomContent">
-        <!-- Dynamic content loaded here -->
-      </div>
-    </div>
-
-    <div class="sidebar">
-      <div class="sidebar-section">
-        <h3>Progress</h3>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <p style="font-size: 13px; color: #94a3b8;" id="progressText">0% Complete</p>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Evidence Collected</h3>
-        <div class="evidence-list" id="evidenceList">
-          <!-- Evidence items loaded here -->
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h3>Suspects</h3>
-        <div class="evidence-list" id="suspectList">
-          <div class="evidence-item">🔴 Alex - Diamond Dealer</div>
-          <div class="evidence-item">🔵 Ben - Security Guard</div>
-          <div class="evidence-item">🟡 Clara - Museum Curator</div>
-        </div>
-      </div>
-    </div>
+<div class="container" id="gameContainer">
+  <div class="main-content">
+    <h1>🔍 The Unsolved Case</h1>
+    <div class="room-title" id="roomTitle"></div>
+    <div class="timer" id="timerDisplay"></div>
+    <div id="roomContent"></div>
   </div>
 
-  <div class="image-modal" id="imageModal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeImageModal()">×</button>
-      <div class="modal-image" id="modalImage"></div>
-      <div class="modal-description" id="modalDescription"></div>
-    </div>
+  <div class="sidebar">
+    <p><strong>Room:</strong> <span id="roomNumber"></span></p>
+    <p><strong>Hints used:</strong> <span id="hintsUsed">0</span></p>
+    <p id="progressText">0% Complete</p>
+    <h3 style="margin-top:15px">Evidence</h3>
+    <div id="evidenceList"></div>
   </div>
+</div>
 
-  <script>
-    // Game State and Data
-    const gameState = {
-      currentRoom: 0,
-      score: 100,          // starting score now 100
-      hintsUsed: 0,
-      solvedRooms: new Set(),
-      collectedEvidence: new Set(),
-      hints: {},
-      roomFlags: {},
-      timeRemaining: 0,
-      timerInterval: null,
-      roomTimeExpired: false,
-      cooldownInterval: null,
-      cooldownRemaining: 0
-    };
+<div class="image-modal" id="imageModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeImageModal()">X</button>
+    <div id="modalImage" style="font-size:120px"></div>
+    <div id="modalDescription" style="margin-top:10px"></div>
+    <div id="modalActions"></div>
+  </div>
+</div>
 
-    const rooms = [
-      {
-        id: 0,
-        title: "Room 1: The Crime Scene",
-        timeLimit: 180,
-        story: "A precious diamond has been stolen from the museum. Three suspects are involved: Alex (diamond dealer), Ben (security guard), and Clara (museum curator). Investigate the crime scene and find visual clues.",
-        clues: [
-          // textual clues intentionally left out of the main view
-        ],
-        visualClues: [
-          { emoji: "📝", label: "Note Found", description: "A handwritten note: 'Meet at 1_:3_' — some digits are rubbed out and hard to read." },
-          { emoji: "🕐", label: "Clock", description: "The museum clock shows 3:30 PM - exactly when the alarm triggered" },
-          { emoji: "🔒", label: "Safe Lock", description: "High-security safe requires 4-digit code - only opened during the gap" },
-          { emoji: "📊", label: "Security Log", description: "Digital record showing visitor access times" }
-        ],
-        puzzle: {
-          question: "What time was the diamond stolen? (Use format: HH:MM)",
-          answer: "15:30",
-          hint: "Some digits are hard to read on the note — a forensics tool might reveal faint ink. Think about what could show hidden writing."
-        },
-        evidence: "Security Log Extract"
-      },
-      {
-        id: 1,
-        title: "Room 2: Suspect Interrogation",
-        timeLimit: 180,
-        story: "You've narrowed down the time. Now examine visual evidence about each suspect. Study their faces and surroundings to find inconsistencies in their alibis.",
-        clues: [
-          { type: "text", content: "🗣 Alex: 'I was in my shop the whole afternoon'" },
-          { type: "text", content: "🗣 Ben: 'I was on duty at the north entrance'" },
-          { type: "text", content: "🗣 Clara: 'I was in my office reviewing documents'" },
-          { type: "text", content: "📱 Phone records show Clara made a call at 3:15 PM" }
-        ],
-        visualClues: [
-          { emoji: "👨", label: "Alex", description: "Diamond dealer - calm behind the glass; a shadow in the display suggests someone left around 3:15." },
-          { emoji: "👮", label: "Ben", description: "Security guard - uniform and patrol watch visible; the watch face seems to show a different time than the camera timestamp." },
-          { emoji: "👩", label: "Clara", description: "Museum curator - concerned and defensive; phone records show a call at 3:15, but it's marked as 'forwarded' from an external number." },
-          { emoji: "📹", label: "Security Camera", description: "Obscured footage: a blurred figure in dark clothing enters wearing a jacket similar to Ben's, face indistinct (hard to be certain)." }
-        ],
-        puzzle: {
-          question: "Who is lying about their alibi? (Enter: Alex, Ben, or Clara)",
-          answer: "clara",
-          hint: "Some evidence looks definitive, but one clue seems staged: the call is forwarded and the footage is blurred. Reconcile the forwarded call with the camera — whose story still contradicts the records?"
-        },
-        evidence: "Phone Records"
-      },
-      {
-        id: 2,
-        title: "Room 3: The Final Code",
-        timeLimit: 120,
-        story: "You've identified the suspect! Now examine the visual evidence vault to crack the final code. Study the patterns and symbols carefully.",
-        clues: [
-          { type: "text", content: "🔢 The code is 4 digits long" },
-          { type: "text", content: "📌 First clue: '15' (from the time of theft)" },
-          { type: "text", content: "📌 Second clue: '30' (from the note)" },
-          { type: "text", content: "🎯 Combine the clues to form the final code" }
-        ],
-        visualClues: [
-          { emoji: "🏛", label: "First Digit", description: "Number 1 - A single pillar in the museum hall (represents 1)" },
-          { emoji: "⭐", label: "Second Digit", description: "Number 5 - Five-pointed star ornament from the display (represents 5)" },
-          { emoji: "🔺", label: "Third Digit", description: "Number 3 - Three triangular security barriers (represents 3)" },
-          { emoji: "🔐", label: "Fourth Digit", description: "Number 0 - A perfectly round vault padlock (represents 0)" }
-        ],
-        puzzle: {
-          question: "Enter the 4-digit code to unlock the evidence vault:",
-          answer: "1530",
-          hint: "The time of theft (15:30) - remove the colon! The visual clues show the digits: 1, 5, 3, 0"
-        },
-        evidence: "Confession Evidence"
-      }
-    ];
+<script>
+const gameState={
+currentRoom:0,hintsUsed:0,solved:new Set(),evidence:new Set(),
+timeRemaining:0,timer:null,
+roomFlags:{}
+};
 
-    // Initialize Game
-    function initGame() {
-      updateUI();
-      loadRoom(0);
-    }
+const rooms=[
+{
+title:"Room 1: The Crime Scene",
+timeLimit:180,
+story:"A diamond vanished. Investigate visual clues.",
+visualClues:[
+{emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
+{emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
+{emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
+{emoji:"📊",label:"Security Log",description:"Access recorded at 15:30"}
+],
+puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
+evidence:"Security Log Extract"
+},
+{
+title:"Room 2: Suspect Interrogation",
+timeLimit:180,
+story:"Study suspects and alibis.",
+visualClues:[
+{emoji:"👨",label:"Alex",description:"Left shop at 3:15"},
+{emoji:"👮",label:"Ben",description:"Watch time mismatched"},
+{emoji:"👩",label:"Clara",description:"Call forwarded at 3:15"},
+{emoji:"📹",label:"Camera",description:"Blurred figure in guard jacket"}
+],
+puzzle:{question:"Who is lying? (Alex, Ben, Clara)",answer:"clara"},
+evidence:"Phone Records"
+},
+{
+title:"Room 3: The Final Code",
+timeLimit:120,
+story:"Combine everything to unlock the vault.",
+visualClues:[
+{emoji:"🏛",label:"Digit 1",description:"One pillar"},
+{emoji:"⭐",label:"Digit 5",description:"Five-point star"},
+{emoji:"🔺",label:"Digit 3",description:"Three barriers"},
+{emoji:"🔐",label:"Digit 0",description:"Round lock"}
+],
+puzzle:{question:"Enter the 4-digit code",answer:"1530"},
+evidence:"Confession Evidence"
+}
+];
 
-    function loadRoom(roomIndex) {
-      // clear any intervals from previous room
-      if (gameState.timerInterval) { clearInterval(gameState.timerInterval); gameState.timerInterval = null; }
-      if (gameState.cooldownInterval) { clearInterval(gameState.cooldownInterval); gameState.cooldownInterval = null; gameState.cooldownRemaining = 0; }
-      // clear any active UV intervals for previous room
-      if (gameState.roomFlags && gameState.roomFlags[gameState.currentRoom] && gameState.roomFlags[gameState.currentRoom].uvInterval) {
-        clearInterval(gameState.roomFlags[gameState.currentRoom].uvInterval);
-        gameState.roomFlags[gameState.currentRoom].uvInterval = null;
-      }
+function formatTime(s){
+const m=Math.floor(s/60);
+const sec=s%60;
+return `${m}:${sec<10?"0":""}${sec}`;
+}
 
-      if (roomIndex >= rooms.length) {
-        showFinalScreen();
-        return;
-      }
+function loadRoom(i){
+if(i>=rooms.length){endGame();return;}
+gameState.currentRoom=i;
+gameState.timeRemaining=rooms[i].timeLimit;
 
-      gameState.currentRoom = roomIndex;
-      gameState.roomTimeExpired = false;
-      const room = rooms[roomIndex];
-      gameState.timeRemaining = room.timeLimit;
+if(!gameState.roomFlags[i]){
+gameState.roomFlags[i]={uvCooldown:0,uvInterval:null,noteRevealed:false};
+}
 
-      const content = document.getElementById("roomContent");
-      // textual clues removed per request (no content shown below visual clues)
-      const cluesHTML = '';
+document.getElementById("roomTitle").textContent=rooms[i].title;
+document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
 
-      const visualCluesHTML = room.visualClues ? `
-        <div class="visual-clues">
-          ${room.visualClues.map((clue, idx) => `
-            <div class="clue-image" onclick="openImageModal(${roomIndex}, ${idx})" title="${escapeHtml(clue.label)}">
-              <div class="clue-image-content">${clue.emoji}</div>
-              <div class="clue-image-label">${clue.label}</div>
-            </div>
-          `).join("")}
-        </div>
-      ` : "";
+document.getElementById("roomContent").innerHTML=`
+<p>${rooms[i].story}</p>
+<div class="visual-clues">
+${rooms[i].visualClues.map((c,idx)=>`
+<div class="clue-image" onclick="openImageModal(${idx})">
+<div style="font-size:60px">${c.emoji}</div>
+<div>${c.label}</div>
+</div>`).join("")}
+</div>
 
-      content.innerHTML = `
-        <div class="timer" id="timerDisplay">⏱ ${formatTime(gameState.timeRemaining)}</div>
-        <div class="clues">
-          <h3>📖 Story</h3>
-          <p style="margin-bottom: 15px; line-height: 1.6;">${room.story}</p>
-          ${visualCluesHTML}
-          ${cluesHTML}
-        </div>
+<div style="margin-top:20px">
+<p>${rooms[i].puzzle.question}</p>
+<input id="answerInput"/>
+<button onclick="submitAnswer()">Submit</button>
+<div id="message"></div>
+</div>`;
 
-        <div class="puzzle-section">
-          <h3>🔐 Puzzle</h3>
-          <div class="puzzle-question">${room.puzzle.question}</div>
-          <div class="input-group">
-            <input type="text" id="answerInput" placeholder="Enter your answer..." ${gameState.roomTimeExpired ? 'disabled' : ''} />
-            <button id="submitBtn" onclick="submitAnswer()" ${gameState.roomTimeExpired ? 'disabled' : ''}>Submit</button>
-          </div>
-          <button class="hint-btn" id="hintBtn" onclick="useHint()" ${gameState.roomTimeExpired ? 'disabled' : ''}>💡 Use Hint (-30s)</button>
-          <div id="message"></div>
-        </div>
-      `;
+startTimer();
+updateSidebar();
+}
 
-      document.getElementById("roomTitle").textContent = room.title;
-      document.getElementById("roomNumber").textContent = ${roomIndex + 1}/${rooms.length};
+function startTimer(){
+clearInterval(gameState.timer);
+const d=document.getElementById("timerDisplay");
+gameState.timer=setInterval(()=>{
+gameState.timeRemaining--;
+d.textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
+if(gameState.timeRemaining<=0){
+clearInterval(gameState.timer);
+nextRoom();
+}
+},1000);
+}
 
-      setTimeout(() => {
-        const inputEl = document.getElementById("answerInput");
-        if (inputEl && !gameState.roomTimeExpired) inputEl.focus();
-      }, 50);
+function submitAnswer(){
+const v=document.getElementById("answerInput").value.trim().toLowerCase();
+const r=rooms[gameState.currentRoom];
+const m=document.getElementById("message");
+if(v===r.puzzle.answer){
+m.className="message success";
+m.textContent="Correct!";
+gameState.solved.add(gameState.currentRoom);
+gameState.evidence.add(r.evidence);
+setTimeout(nextRoom,800);
+}else{
+m.className="message error";
+m.textContent="Incorrect!";
+}
+updateSidebar();
+}
 
-      // start timer for this room
-      startTimer();
-      updateUI();
-    }
+function openImageModal(idx){
+const roomIndex=gameState.currentRoom;
+const clue=rooms[roomIndex].visualClues[idx];
+const flags=gameState.roomFlags[roomIndex];
 
-    function escapeHtml(text) {
-      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
+document.getElementById("modalImage").textContent=clue.emoji;
+const desc=document.getElementById("modalDescription");
+const actions=document.getElementById("modalActions");
+actions.innerHTML="";
 
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return ${mins}:${secs < 10 ? '0' : ''}${secs};
-    }
+if(roomIndex===0 && clue.label==="Note Found"){
+if(flags.noteRevealed){
+desc.innerHTML="<strong>Revealed note:</strong> Meet at 15:30";
+}else if(flags.uvCooldown>0){
+desc.innerHTML=`${clue.description}<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
+}else{
+desc.textContent=clue.description;
+const btn=document.createElement("button");
+btn.textContent="Inspect with UV Lamp";
+btn.onclick=()=>startUV(roomIndex);
+actions.appendChild(btn);
+}
+}else{
+desc.textContent=clue.description;
+}
 
-    function startTimer() {
-      const timerDisplay = document.getElementById("timerDisplay");
-      if (!timerDisplay) return;
-      timerDisplay.classList.remove("warning");
+document.getElementById("imageModal").classList.add("active");
+}
 
-      if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+function startUV(roomIndex){
+const flags=gameState.roomFlags[roomIndex];
+flags.uvCooldown=90;
 
-      gameState.timerInterval = setInterval(() => {
-        gameState.timeRemaining--;
-        if (gameState.timeRemaining < 0) gameState.timeRemaining = 0;
+flags.uvInterval=setInterval(()=>{
+flags.uvCooldown--;
+if(flags.uvCooldown<=0){
+clearInterval(flags.uvInterval);
+flags.noteRevealed=true;
+}
+},1000);
+}
 
-        if (timerDisplay) {
-          timerDisplay.textContent = ⏱ ${formatTime(gameState.timeRemaining)};
+function closeImageModal(){
+document.getElementById("imageModal").classList.remove("active");
+}
 
-          if (gameState.timeRemaining <= 30 && gameState.timeRemaining > 0) {
-            timerDisplay.classList.add("warning");
-          } else {
-            timerDisplay.classList.remove("warning");
-          }
+function nextRoom(){
+clearInterval(gameState.timer);
+loadRoom(gameState.currentRoom+1);
+}
 
-          if (gameState.timeRemaining <= 0) {
-            // time up handling
-            clearInterval(gameState.timerInterval);
-            gameState.timerInterval = null;
-            gameState.roomTimeExpired = true;
-            timerDisplay.textContent = "⏱ TIME'S UP!";
+function updateSidebar(){
+document.getElementById("hintsUsed").textContent=gameState.hintsUsed;
+document.getElementById("progressText").textContent=
+`${Math.round(gameState.solved.size/rooms.length*100)}% Complete`;
+document.getElementById("evidenceList").innerHTML=
+rooms.map(r=>`
+<div class="evidence-item">
+${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}
+</div>`).join("");
+}
 
-            // disable controls and show message
-            const input = document.getElementById("answerInput");
-            const buttons = document.querySelectorAll(".puzzle-section button");
-            if (input) input.disabled = true;
-            buttons.forEach(btn => btn.disabled = true);
-            const messageEl = document.getElementById("message");
-            if (messageEl) {
-              messageEl.className = "message error";
-              messageEl.textContent = "❌ Time's up! Moving to next room...";
-            }
+function endGame(){
+document.getElementById("gameContainer").innerHTML=
+"<h1 style='padding:40px;color:#16c784'>🏆 Case Closed!</h1>";
+}
 
-            // clear cooldown if any
-            if (gameState.cooldownInterval) {
-              clearInterval(gameState.cooldownInterval);
-              gameState.cooldownInterval = null;
-              gameState.cooldownRemaining = 0;
-            }
+loadRoom(0);
+</script>
 
-            setTimeout(() => {
-              gameState.currentRoom++;
-              loadRoom(gameState.currentRoom);
-            }, 1200);
-          }
-        }
-      }, 1000);
-    }
-
-    function submitAnswer() {
-      const inputField = document.getElementById("answerInput");
-      if (!inputField) return;
-      const raw = inputField.value.trim().toLowerCase();
-      const room = rooms[gameState.currentRoom];
-      const messageEl = document.getElementById("message");
-
-      if (gameState.roomTimeExpired) {
-        if (messageEl) {
-          messageEl.className = "message error";
-          messageEl.textContent = "⏱ You can't answer — time expired.";
-        }
-        return;
-      }
-
-      if (!raw) {
-        if (messageEl) {
-          messageEl.className = "message error";
-          messageEl.textContent = "Please enter an answer.";
-        }
-        return;
-      }
-
-      // correct answer
-      if (raw === room.puzzle.answer.toLowerCase()) {
-        clearInterval(gameState.timerInterval);
-        gameState.timerInterval = null;
-        gameState.solvedRooms.add(gameState.currentRoom);
-        gameState.collectedEvidence.add(room.evidence);
-        gameState.score += 200; // reward for solving
-        if (messageEl) {
-          messageEl.className = "message success";
-          messageEl.textContent = "✅ Correct! Well done.";
-        }
-        updateUI();
-
-        // clear cooldown if any
-      if (gameState.cooldownInterval) {
-          clearInterval(gameState.cooldownInterval);
-          gameState.cooldownInterval = null;
-          gameState.cooldownRemaining = 0;
-        }
-
-        setTimeout(() => {
-          gameState.currentRoom++;
-          loadRoom(gameState.currentRoom);
-        }, 1000);
-
-      } else {
-        // incorrect answer: apply penalty and start 15s cooldown
-        gameState.score = Math.max(0, gameState.score - 100);
-        if (messageEl) {
-          messageEl.className = "message error";
-          messageEl.textContent = "❌ Incorrect — controls locked for 15s. (-100 points)";
-        }
-        updateUI();
-
-        // disable input and buttons
-        const input = document.getElementById("answerInput");
-        const buttons = document.querySelectorAll(".puzzle-section button");
-        if (input) input.disabled = true;
-        buttons.forEach(btn => btn.disabled = true);
-
-        // clear existing cooldown if present
-        if (gameState.cooldownInterval) {
-          clearInterval(gameState.cooldownInterval);
-          gameState.cooldownInterval = null;
-          gameState.cooldownRemaining = 0;
-        }
-
-        gameState.cooldownRemaining = 15;
-        const cooldownMsgEl = document.getElementById("message");
-
-        // show countdown and re-enable when done (unless time expired)
-        gameState.cooldownInterval = setInterval(() => {
-          if (gameState.roomTimeExpired) {
-            // if room already expired, stop cooldown timer
-            clearInterval(gameState.cooldownInterval);
-            gameState.cooldownInterval = null;
-            gameState.cooldownRemaining = 0;
-            return;
-          }
-
-          gameState.cooldownRemaining--;
-          if (gameState.cooldownRemaining <= 0) {
-            clearInterval(gameState.cooldownInterval);
-            gameState.cooldownInterval = null;
-            gameState.cooldownRemaining = 0;
-
-            // re-enable controls only if room not expired
-            if (!gameState.roomTimeExpired) {
-              const input2 = document.getElementById("answerInput");
-              const buttons2 = document.querySelectorAll(".puzzle-section button");
-              if (input2) input2.disabled = false;
-              buttons2.forEach(btn => btn.disabled = false);
-
-              if (cooldownMsgEl) {
-                cooldownMsgEl.className = "message";
-                cooldownMsgEl.textContent = "You can try again now.";
-              }
-            }
-          } else {
-            if (cooldownMsgEl) {
-              cooldownMsgEl.className = "message error";
-              cooldownMsgEl.textContent = ❌ Incorrect — try again in ${gameState.cooldownRemaining}s;
-            }
-          }
-        }, 1000);
-      }
-    }
-
-    function useHint() {
-      const room = rooms[gameState.currentRoom];
-      const messageEl = document.getElementById("message");
-      if (!room || !messageEl) return;
-
-      // No score penalty for hints anymore — only reduce time by 30s
-      gameState.hintsUsed++;
-      // remove point deduction here (previously subtracted 50)
-
-      // reduce time by 30 seconds
-      gameState.timeRemaining = Math.max(0, gameState.timeRemaining - 30);
-
-      // If time runs out because of hint, handle expiry immediately
-      if (gameState.timeRemaining <= 0) {
-        // clear timer and mark expired
-        if (gameState.timerInterval) { clearInterval(gameState.timerInterval); gameState.timerInterval = null; }
-        gameState.roomTimeExpired = true;
-        const timerDisplay = document.getElementById("timerDisplay");
-        if (timerDisplay) timerDisplay.textContent = "⏱ TIME'S UP!";
-
-        // disable controls
-        const input = document.getElementById("answerInput");
-        const buttons = document.querySelectorAll(".puzzle-section button");
-        if (input) input.disabled = true;
-        buttons.forEach(btn => btn.disabled = true);
-
-        // clear cooldown if active
-        if (gameState.cooldownInterval) { clearInterval(gameState.cooldownInterval); gameState.cooldownInterval = null; gameState.cooldownRemaining = 0; }
-
-        // show message and move to next room shortly
-        messageEl.className = "message error";
-        messageEl.textContent = "💡 Hint used — but it consumed the remaining time. Moving to next room...";
-        updateUI();
-        setTimeout(() => {
-          gameState.currentRoom++;
-          loadRoom(gameState.currentRoom);
-        }, 1200);
-        return;
-      }
-
-      // Normal hint behavior: show hint text and continue (no point deduction)
-      messageEl.className = "message";
-      messageEl.textContent = 💡 Hint: ${room.puzzle.hint} (-30s);
-      updateUI();
-    }
-
-    function openImageModal(roomIndex, idx) {
-      const room = rooms[roomIndex];
-      if (!room || !room.visualClues) return;
-      const clue = room.visualClues[idx];
-      if (!clue) return;
-      const modal = document.getElementById("imageModal");
-      const modalImage = document.getElementById("modalImage");
-      const modalDesc = document.getElementById("modalDescription");
-      modalImage.textContent = clue.emoji;
-
-      // initialize roomFlags for this room if missing
-      if (!gameState.roomFlags[roomIndex]) {
-        gameState.roomFlags[roomIndex] = { uvCooldown: 0, uvInterval: null, noteRevealed: false };
-      }
-
-      // Special handling for Room 1's Note Found clue: add UV inspect button and dynamic description
-      if (roomIndex === 0 && clue.label === 'Note Found') {
-        const flags = gameState.roomFlags[roomIndex];
-        if (flags.noteRevealed) {
-          modalDesc.innerHTML = "<strong>Revealed note:</strong> 'Meet at 15:30'";
-        } else if (flags.uvCooldown > 0) {
-          modalDesc.innerHTML = ${clue.description}<br><div style=\"margin-top:10px;\">UV lamp warming: <strong>${flags.uvCooldown}s</strong></div>;
-        } else {
-          modalDesc.textContent = clue.description;
-        }
-        // Add inspect button
-        // remove any existing action button
-        const existing = document.getElementById('uvActionBtn');
-        if (existing) existing.remove();
-        const btn = document.createElement('button');
-        btn.id = 'uvActionBtn';
-        btn.style.marginTop = '12px';
-        btn.textContent = flags.noteRevealed ? 'UV: Revealed' : (flags.uvCooldown > 0 ? 'UV: Warming' : 'Inspect with UV Lamp');
-        btn.disabled = flags.noteRevealed || flags.uvCooldown > 0;
-        btn.onclick = () => startUVWarmup(roomIndex);
-        modal.querySelector('.modal-content').appendChild(btn);
-      } else {
-        modalDesc.textContent = clue.description;
-      }
-      modal.classList.add("active");
-    }
-
-    function startUVWarmup(roomIndex) {
-      const flags = gameState.roomFlags[roomIndex];
-      const modalDesc = document.getElementById('modalDescription');
-      const btn = document.getElementById('uvActionBtn');
-      if (!flags || flags.noteRevealed) return;
-      if (flags.uvCooldown > 0) {
-        // already warming
-        return;
-      }
-      // start 90s warmup to reveal rubbed ink
-      flags.uvCooldown = 90;
-      if (btn) { btn.textContent = 'UV: Warming'; btn.disabled = true; }
-      if (modalDesc) modalDesc.innerHTML = ${rooms[roomIndex].visualClues.find(c=>c.label==='Note Found').description}<br><div style=\"margin-top:10px;\">UV lamp warming: <strong>${flags.uvCooldown}s</strong></div>;
-      flags.uvInterval = setInterval(() => {
-        flags.uvCooldown--;
-        if (flags.uvCooldown <= 0) {
-          clearInterval(flags.uvInterval);
-          flags.uvInterval = null;
-          flags.uvCooldown = 0;
-          flags.noteRevealed = true;
-          if (modalDesc) modalDesc.innerHTML = "<strong>Revealed note:</strong> 'Meet at 15:30'";
-          if (btn) { btn.textContent = 'UV: Revealed'; btn.disabled = true; }
-        } else {
-          if (modalDesc) modalDesc.innerHTML = ${rooms[roomIndex].visualClues.find(c=>c.label==='Note Found').description}<br><div style=\"margin-top:10px;\">UV lamp warming: <strong>${flags.uvCooldown}s</strong></div>;
-        }
-      }, 1000);
-    }
-
-    function closeImageModal() {
-      const modal = document.getElementById("imageModal");
-      modal.classList.remove("active");
-    }
-
-    function updateUI() {
-      const scoreEl = document.getElementById("score");
-      if (scoreEl) scoreEl.textContent = gameState.score;
-      document.getElementById("hintsUsed").textContent = gameState.hintsUsed;
-      const percent = Math.round((gameState.solvedRooms.size / rooms.length) * 100);
-      const fill = document.getElementById("progressFill");
-      const text = document.getElementById("progressText");
-      if (fill) fill.style.width = percent + "%";
-      if (text) text.textContent = ${percent}% Complete;
-
-      const list = document.getElementById("evidenceList");
-      if (list) {
-        list.innerHTML = rooms.map((r) => {
-          const collected = gameState.collectedEvidence.has(r.evidence);
-          const cls = collected ? 'evidence-item collected' : 'evidence-item locked';
-          const prefix = collected ? '✅' : '🔒';
-          return <div class="${cls}">${prefix} ${escapeHtml(r.evidence)}</div>;
-        }).join('');
-      }
-
-      // update timer display if present
-      const timerDisplay = document.getElementById("timerDisplay");
-      if (timerDisplay && !gameState.roomTimeExpired) {
-        timerDisplay.textContent = ⏱ ${formatTime(gameState.timeRemaining)};
-      }
-
-      // update roomNumber and title
-      document.getElementById("roomNumber").textContent = ${Math.min(gameState.currentRoom + 1, rooms.length)}/${rooms.length};
-      if (rooms[gameState.currentRoom]) {
-        document.getElementById("roomTitle").textContent = rooms[gameState.currentRoom].title;
-      }
-    }
-
-    function showFinalScreen() {
-      if (gameState.timerInterval) clearInterval(gameState.timerInterval);
-      if (gameState.cooldownInterval) clearInterval(gameState.cooldownInterval);
-
-      const container = document.getElementById("gameContainer");
-      container.innerHTML = `
-        <div class="main-content" style="grid-column: 1 / -1;">
-          <div class="final-screen">
-            <h2>🏆 Case Closed!</h2>
-            <p>You finished the escape experience.</p>
-            <div class="final-score">
-              <div class="score-item"><span>Rooms Solved:</span><strong>${gameState.solvedRooms.size}/${rooms.length}</strong></div>
-                <div class="score-item"><span>Hints Used:</span><strong>${gameState.hintsUsed}</strong></div>
-            </div>
-            <p style="margin-top:20px;">Evidence collected:</p>
-            <div style="text-align:left; max-width:600px; margin: 0 auto;">
-              ${Array.from(gameState.collectedEvidence).map(e => <div class="evidence-item collected">${escapeHtml(e)}</div>).join('') || '<div class="evidence-item locked">No evidence collected</div>'}
-            </div>
-            <div style="margin-top:20px; max-width:700px; text-align:left;">
-              <p style="margin-top:8px; font-weight:700; color:#16c784;">Bonus Riddle</p>
-              <div class="clue-item" style="font-style:italic;">No wires in sight, yet minds are linked,<br> A room where signals are tested and synced.<br><strong>Name this place.</strong></div>
-              <div style="margin-top:12px;">
-                <div style="display:flex; gap:10px; justify-content:flex-start; align-items:center; margin-top:8px;">
-                  <input id="riddleInput" type="text" placeholder="Enter your answer..." onkeydown="if (event.key==='Enter') checkRiddleAnswer()" style="flex:1; padding:10px; border-radius:6px; border:2px solid #16c784; background:transparent; color:#e0e0e0;" />
-                  <button id="riddleBtn" onclick="checkRiddleAnswer()">Submit</button>
-                </div>
-                <div id="riddleMessage" style="margin-top:12px;"></div>
-              </div>
-            </div>
-            <div style="margin-top:20px;">
-              <button onclick="restartGame()">Play Again</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function restartGame() {
-      // Reset state
-      gameState.currentRoom = 0;
-      gameState.score = 100;   // reset to 100
-      gameState.hintsUsed = 0;
-      gameState.solvedRooms = new Set();
-      gameState.collectedEvidence = new Set();
-      gameState.roomTimeExpired = false;
-      gameState.roomFlags = {};
-      gameState.timeRemaining = 0;
-      gameState.cooldownRemaining = 0;
-      if (gameState.timerInterval) clearInterval(gameState.timerInterval);
-      if (gameState.cooldownInterval) clearInterval(gameState.cooldownInterval);
-      initGame();
-    }
-
-    function checkRiddleAnswer() {
-      const input = document.getElementById('riddleInput');
-      const msg = document.getElementById('riddleMessage');
-      const btn = document.getElementById('riddleBtn');
-      if (!input || !msg) return;
-      const raw = input.value.trim().toLowerCase();
-      if (!raw) {
-        msg.className = 'message error';
-        msg.textContent = 'Please enter an answer.';
-        return;
-      }
-      const accepted = ['internet lab', 'the internet lab', 'internetlab', 'internet-lab'];
-      if (accepted.includes(raw)) {
-        msg.className = 'message success';
-        msg.textContent = '✅ Correct! This is the Internet Lab.';
-        input.disabled = true;
-        if (btn) btn.disabled = true;
-      } else {
-        msg.className = 'message error';
-        msg.textContent = '❌ Not quite. Try again.';
-      }
-    }
-
-    // Start the game
-    initGame();
-  </script>
 </body>
 </html>
