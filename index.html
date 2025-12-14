@@ -89,15 +89,10 @@ cursor:pointer;
 color:#16c784;
 font-size:18px
 }
-.hint-message{
-margin-top:6px;
-font-style:italic
-}
 .next-room{
 background:#16c784;
 color:#000;
-font-weight:bold;
-margin-top:15px
+font-weight:bold
 }
 .play-again{
 margin-top:30px;
@@ -111,7 +106,8 @@ position:fixed;
 inset:0;
 background:rgba(0,0,0,.9);
 align-items:center;
-justify-content:center
+justify-content:center;
+z-index:10
 }
 .image-modal.active{display:flex}
 .modal-content{
@@ -127,7 +123,10 @@ position:absolute;
 top:10px;
 right:10px
 }
-.evidence-item{font-size:14px;margin-bottom:6px}
+.final-screen{
+max-height:90vh;
+overflow-y:auto;
+}
 .final-riddle{
 margin-top:30px;
 padding:20px;
@@ -184,8 +183,7 @@ roomFlags:{},
 cooldownActive:false
 };
 
-const rooms=[
-{
+const rooms=[{
 title:"Room 1: The Crime Scene",
 timeLimit:300,
 story:"A diamond vanished. Investigate visual clues.",
@@ -193,60 +191,23 @@ visualClues:[
 {emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
 {emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
 {emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
-{emoji:"📊",label:"Security Log",description:"Security camera captured suspicious activity near the vault"}
+{emoji:"📊",label:"Security Log",description:"Suspicious activity near the vault"}
 ],
 puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
 evidence:"Security Log Extract",
-hint:"The note and the clock complete each other"
-},
-{
-title:"Room 2: Suspect Interrogation",
-timeLimit:180,
-story:"Study suspects and alibis.",
-visualClues:[
-{emoji:"👨",label:"Alex",description:"Left shop at 3:15"},
-{emoji:"👮",label:"Ben",description:"Watch time mismatched"},
-{emoji:"👩",label:"Clara",description:"Call forwarded at 3:15"},
-{emoji:"📹",label:"Camera",description:"Blurred figure in guard jacket"}
-],
-puzzle:{question:"Who is lying? (Alex, Ben, Clara)",answer:"clara"},
-evidence:"Phone Records",
-hint:"Who benefits from confusion?"
-},
-{
-title:"Room 3: The Final Code",
-timeLimit:120,
-story:"Combine everything to unlock the vault.",
-visualClues:[
-{emoji:"🏛",label:"Digit 1",description:"One pillar"},
-{emoji:"⭐",label:"Digit 5",description:"Five-point star"},
-{emoji:"🔺",label:"Digit 3",description:"Three barriers"},
-{emoji:"🔐",label:"Digit 0",description:"Round lock"}
-],
-puzzle:{question:"Enter the 4-digit code",answer:"1530"},
-evidence:"Confession Evidence",
-hint:"Use digits from previous rooms"
-}
-];
+hint:"The note becomes clearer under UV light"
+}];
 
 function formatTime(s){
 return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 }
 
-function startTimer(){
-clearInterval(gameState.timer);
-gameState.timer=setInterval(()=>{
-gameState.timeRemaining--;
-document.getElementById("timerDisplay").textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
-},1000);
-}
-
 function loadRoom(i){
-if(i>=rooms.length){showFinalScreen();return;}
 gameState.currentRoom=i;
 gameState.timeRemaining=rooms[i].timeLimit;
+gameState.roomFlags[i]={uvTime:120,revealed:false};
 document.getElementById("roomTitle").textContent=rooms[i].title;
-document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
+document.getElementById("roomNumber").textContent=`${i+1}/1`;
 document.getElementById("roomContent").innerHTML=`
 <p>${rooms[i].story}</p>
 <div class="visual-clues">
@@ -259,106 +220,80 @@ ${rooms[i].visualClues.map((c,idx)=>`
 <p>${rooms[i].puzzle.question}</p>
 <input id="answerInput">
 <button onclick="submitAnswer(event)">Submit</button>
-<div class="hint-button" onclick="showHint()">💡 Hint</div>
-<div id="hintMsg" class="hint-message"></div>
 <div id="message"></div>
 `;
 startTimer();
-updateSidebar();
 }
 
-function submitAnswer(e){
-const input=document.getElementById("answerInput");
-const btn=e.target;
-const msg=document.getElementById("message");
-const r=rooms[gameState.currentRoom];
-if(input.value.trim().toLowerCase()===r.puzzle.answer){
-msg.className="message success";
-msg.textContent="Correct!";
-successSound.play();
-gameState.solved.add(gameState.currentRoom);
-gameState.evidence.add(r.evidence);
-document.getElementById("roomContent").innerHTML+=
-`<button class="next-room" onclick="loadRoom(${gameState.currentRoom+1})">➡ Next Room</button>`;
-}else{
-errorSound.play();
-gameState.cooldownActive=true;
-input.disabled=true;
-btn.disabled=true;
-let t=30;
-msg.className="message error";
-const cd=setInterval(()=>{
-msg.textContent=`❌ Incorrect. Try again in ${t}s`;
-t--;
-if(t<0){
-clearInterval(cd);
-gameState.cooldownActive=false;
-input.disabled=false;
-btn.disabled=false;
-msg.textContent="You can try again now.";
-}
+function startTimer(){
+clearInterval(gameState.timer);
+gameState.timer=setInterval(()=>{
+gameState.timeRemaining--;
+document.getElementById("timerDisplay").textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
 },1000);
-}
-updateSidebar();
-}
-
-function showHint(){
-if(gameState.cooldownActive){
-document.getElementById("hintMsg").textContent="⛔ Hint locked during cooldown";
-return;
-}
-document.getElementById("hintMsg").textContent=rooms[gameState.currentRoom].hint;
-gameState.hintsUsed++;
-gameState.timeRemaining=Math.max(gameState.timeRemaining-60,0);
-updateSidebar();
 }
 
 function openImageModal(i){
-const c=rooms[gameState.currentRoom].visualClues[i];
-document.getElementById("modalImage").textContent=c.emoji;
-document.getElementById("modalDescription").textContent=c.description;
+const clue=rooms[0].visualClues[i];
+const flags=gameState.roomFlags[0];
+document.getElementById("modalImage").textContent=clue.emoji;
+const desc=document.getElementById("modalDescription");
+const actions=document.getElementById("modalActions");
+actions.innerHTML="";
+if(clue.label==="Note Found"){
+if(flags.revealed){
+desc.innerHTML="<strong>Revealed:</strong> Meet at 15:30";
+}else{
+desc.innerHTML=`${clue.description}<br><br>UV warming: ${flags.uvTime}s`;
+const btn=document.createElement("button");
+btn.textContent="Use UV Lamp";
+btn.onclick=()=>{
+const uv=setInterval(()=>{
+flags.uvTime--;
+desc.innerHTML=`${clue.description}<br><br>UV warming: ${flags.uvTime}s`;
+if(flags.uvTime<=0){
+clearInterval(uv);
+flags.revealed=true;
+desc.innerHTML="<strong>Revealed:</strong> Meet at 15:30";
+}
+},1000);
+};
+actions.appendChild(btn);
+}
+}else desc.textContent=clue.description;
 document.getElementById("imageModal").classList.add("active");
 }
 function closeImageModal(){
 document.getElementById("imageModal").classList.remove("active");
 }
 
-function showFinalScreen(){
+function submitAnswer(e){
+const input=document.getElementById("answerInput");
+const msg=document.getElementById("message");
+if(input.value==="15:30"){
+msg.className="message success";
+msg.textContent="Correct!";
+successSound.play();
 document.getElementById("gameContainer").innerHTML=`
-<div style="padding:40px;text-align:center">
+<div class="final-screen" style="padding:40px;text-align:center">
 <h1 style="color:#16c784">🏆 Case Closed!</h1>
 <div class="final-riddle">
-<p><em>No wires in sight, yet minds are linked…</em></p>
+<p><em>No wires in sight, yet minds are linked,<br>
+A room where signals are tested and synced.</em></p>
+<strong>Name this place.</strong>
 <input id="riddleInput">
 <button onclick="checkRiddle()">Submit</button>
 <div id="riddleMsg"></div>
 </div>
-<div class="play-again" onclick="restartGame()">🔄 Play Again</div>
+<div class="play-again" onclick="location.reload()">🔄 Play Again</div>
 </div>`;
+}
 }
 
 function checkRiddle(){
 const v=document.getElementById("riddleInput").value.toLowerCase();
 document.getElementById("riddleMsg").textContent=
 ["internet lab","internetlab"].includes(v)?"✅ Correct!":"❌ Try again";
-}
-
-function updateSidebar(){
-document.getElementById("hintsUsed").textContent=gameState.hintsUsed;
-document.getElementById("progressText").textContent=
-`${Math.round(gameState.solved.size/rooms.length*100)}% Complete`;
-document.getElementById("evidenceList").innerHTML=
-rooms.map(r=>`<div class="evidence-item">
-${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}
-</div>`).join("");
-}
-
-function restartGame(){
-gameState.currentRoom=0;
-gameState.solved.clear();
-gameState.evidence.clear();
-gameState.hintsUsed=0;
-loadRoom(0);
 }
 
 loadRoom(0);
