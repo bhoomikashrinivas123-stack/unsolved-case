@@ -56,9 +56,8 @@ h1{color:#e94560}
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  cursor:pointer;
+  cursor:pointer
 }
-.clue-image:hover{border-color:#e94560}
 button{
   padding:10px 16px;
   background:#e94560;
@@ -69,6 +68,7 @@ button{
   margin-top:10px
 }
 .hint-btn{background:#16c784;color:#000}
+.hint-msg{margin-top:6px;font-style:italic}
 .message.success{color:#16c784}
 .message.error{color:#e94560}
 
@@ -88,7 +88,6 @@ button{
   max-width:500px;
   text-align:center
 }
-
 .final-riddle{
   border:2px solid #16c784;
   padding:20px;
@@ -154,12 +153,12 @@ const rooms=[
  visualClues:[
   {emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
   {emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
-  {emoji:"🔒",label:"Safe Lock",description:"Opened during time gap"},
+  {emoji:"🔒",label:"Safe Lock",description:"Opened during gap"},
   {emoji:"📊",label:"Security Log",description:"Suspicious activity near vault"}
  ],
  puzzle:{question:"What time was the diamond stolen?",answer:"15:30"},
  evidence:"Security Log",
- hint:"Compare the note with the clock"
+ hint:"Compare the note with the clock carefully"
 },
 {
  title:"Room 2: Suspect Interrogation",
@@ -173,7 +172,7 @@ const rooms=[
  ],
  puzzle:{question:"Who is lying?",answer:"clara"},
  evidence:"Phone Records",
- hint:"Look at time inconsistencies"
+ hint:"Who benefits from the time mismatch?"
 },
 {
  title:"Room 3: Final Code",
@@ -187,7 +186,7 @@ const rooms=[
  ],
  puzzle:{question:"Enter the 4-digit code",answer:"1530"},
  evidence:"Confession",
- hint:"Use digits from earlier"
+ hint:"Use digits discovered earlier"
 }
 ];
 
@@ -195,26 +194,24 @@ function loadRoom(i){
  if(i>=rooms.length){showFinal();return;}
  gameState.currentRoom=i;
  gameState.timeRemaining=rooms[i].timeLimit;
- if(!gameState.roomFlags[i]){
-   gameState.roomFlags[i]={uvTime:120,uvRunning:false,revealed:false};
- }
  document.getElementById("roomTitle").textContent=rooms[i].title;
  document.getElementById("roomNumber").textContent=`${i+1}/3`;
 
  document.getElementById("roomContent").innerHTML=`
  <p>${rooms[i].story}</p>
+
  <div class="visual-clues">
  ${rooms[i].visualClues.map((c,idx)=>`
- <div class="clue-image" onclick="openImageModal(${idx})">
- <div style="font-size:60px">${c.emoji}</div>${c.label}
- </div>`).join("")}
+  <div class="clue-image" onclick="openImageModal(${idx})">
+   <div style="font-size:60px">${c.emoji}</div>${c.label}
+  </div>`).join("")}
  </div>
 
  <p>${rooms[i].puzzle.question}</p>
  <input id="answerInput">
  <button onclick="submitAnswer()">Submit</button>
  <button class="hint-btn" onclick="showHint()">💡 Hint</button>
- <div id="hintMsg"></div>
+ <div id="hintMsg" class="hint-msg"></div>
  <div id="message"></div>
  `;
  startTimer();
@@ -225,8 +222,8 @@ function startTimer(){
  clearInterval(gameState.timer);
  gameState.timer=setInterval(()=>{
   gameState.timeRemaining--;
-  document.getElementById("timerDisplay").textContent=`⏱ ${Math.floor(gameState.timeRemaining/60)}:${(gameState.timeRemaining%60).toString().padStart(2,"0")}`;
-  if(gameState.timeRemaining<=0) loadRoom(gameState.currentRoom+1);
+  document.getElementById("timerDisplay").textContent =
+   `⏱ ${Math.floor(gameState.timeRemaining/60)}:${(gameState.timeRemaining%60).toString().padStart(2,"0")}`;
  },1000);
 }
 
@@ -249,7 +246,7 @@ function submitAnswer(){
   let t=30;
   const cd=setInterval(()=>{
    m.className="message error";
-   m.textContent=`Try again in ${t--}s`;
+   m.textContent=`Try again in ${t--} seconds`;
    if(t<0){
     clearInterval(cd);
     gameState.cooldown=false;
@@ -259,82 +256,58 @@ function submitAnswer(){
  }
 }
 
-function openImageModal(idx){
- const r=rooms[gameState.currentRoom];
- const flags=gameState.roomFlags[gameState.currentRoom];
- const clue=r.visualClues[idx];
- document.getElementById("modalImage").textContent=clue.emoji;
-
- if(gameState.currentRoom===0 && clue.label==="Note Found"){
-  if(flags.revealed){
-   document.getElementById("modalDescription").innerHTML="<b>Revealed:</b> Meet at 15:30";
-  }else{
-   document.getElementById("modalDescription").innerHTML=`${clue.description}<br>UV: ${flags.uvTime}s`;
-   document.getElementById("modalActions").innerHTML=`<button onclick="startUV()">Use UV Lamp</button>`;
-  }
- }else{
-  document.getElementById("modalDescription").textContent=clue.description;
-  document.getElementById("modalActions").innerHTML="";
+function showHint(){
+ const hintBox=document.getElementById("hintMsg");
+ if(gameState.cooldown){
+  hintBox.textContent="⛔ Hint locked during cooldown.";
+  return;
  }
- document.getElementById("imageModal").classList.add("active");
+ hintBox.textContent=rooms[gameState.currentRoom].hint;
+ gameState.hintsUsed++;
+ gameState.timeRemaining=Math.max(0,gameState.timeRemaining-60);
+ updateSidebar();
 }
 
-function startUV(){
- const flags=gameState.roomFlags[0];
- if(flags.uvRunning) return;
- flags.uvRunning=true;
- const uv=setInterval(()=>{
-  flags.uvTime--;
-  document.getElementById("modalDescription").innerHTML=`Meet at 1_:3_<br>UV: ${flags.uvTime}s`;
-  if(flags.uvTime<=0){
-   clearInterval(uv);
-   flags.revealed=true;
-   document.getElementById("modalDescription").innerHTML="<b>Revealed:</b> Meet at 15:30";
-  }
- },1000);
+function openImageModal(idx){
+ const r=rooms[gameState.currentRoom];
+ document.getElementById("modalImage").textContent=r.visualClues[idx].emoji;
+ document.getElementById("modalDescription").textContent=r.visualClues[idx].description;
+ document.getElementById("modalActions").innerHTML="";
+ document.getElementById("imageModal").classList.add("active");
 }
 
 function closeImageModal(){
  document.getElementById("imageModal").classList.remove("active");
 }
 
-function showHint(){
- document.getElementById("hintMsg").textContent=rooms[gameState.currentRoom].hint;
- gameState.hintsUsed++;
- gameState.timeRemaining=Math.max(0,gameState.timeRemaining-60);
- updateSidebar();
-}
-
 function showFinal(){
  document.getElementById("gameContainer").innerHTML=`
  <div style="padding:40px;text-align:center">
- <h1>🏆 Case Closed</h1>
- <div class="final-riddle">
- No wires in sight, yet minds are linked…<br>
- <b>Name this place</b>
- <input id="riddle">
- <button onclick="checkRiddle()">Submit</button>
- <div id="riddleMsg"></div>
- </div>
- <div class="play-again" onclick="location.reload()">🔄</div>
+  <h1>🏆 Case Closed</h1>
+  <div class="final-riddle">
+   No wires in sight, yet minds are linked.<br>
+   A room where signals are tested and synced.<br><br>
+   <strong>Name this place</strong><br>
+   <input id="riddle">
+   <button onclick="checkRiddle()">Submit</button>
+   <div id="riddleMsg"></div>
+  </div>
+  <div class="play-again" onclick="location.reload()">🔄</div>
  </div>`;
 }
 
 function checkRiddle(){
  const a=document.getElementById("riddle").value.toLowerCase();
- if(a.includes("internet")){
-  document.getElementById("riddleMsg").textContent="Correct!";
-  document.getElementById("successSound").play();
- }else{
-  document.getElementById("riddleMsg").textContent="Try again.";
- }
+ document.getElementById("riddleMsg").textContent =
+  a.includes("internet") ? "Correct!" : "Try again.";
 }
 
 function updateSidebar(){
  document.getElementById("hintsUsed").textContent=gameState.hintsUsed;
- document.getElementById("progressText").textContent=`${Math.round(gameState.solved.size/3*100)}%`;
+ document.getElementById("progressText").textContent=
+  `${Math.round(gameState.solved.size/3*100)}% Complete`;
  document.getElementById("evidenceList").innerHTML=
- rooms.map(r=>`${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}`).join("<br>");
+  rooms.map(r=>`${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}`).join("<br>");
 }
 
 loadRoom(0);
