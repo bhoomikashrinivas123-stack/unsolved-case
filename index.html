@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Unsolved Case</title>
 
 <style>
@@ -10,66 +10,129 @@
 body{
 font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;
 background:linear-gradient(135deg,#1a1a2e,#16213e);
-color:#e0e0e0;min-height:100vh;
-display:flex;align-items:center;justify-content:center;padding:20px
+color:#e0e0e0;
+min-height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+padding:20px
 }
 .container{
-max-width:1100px;width:100%;background:#0f3460;border-radius:12px;
-display:grid;grid-template-columns:1fr 300px;overflow:hidden
+max-width:1100px;
+width:100%;
+background:#0f3460;
+border-radius:12px;
+display:grid;
+grid-template-columns:1fr 300px;
+overflow:hidden
 }
 .main-content{padding:30px}
-.sidebar{background:#0a1e35;padding:20px;border-left:2px solid #e94560}
+.sidebar{
+background:#0a1e35;
+padding:20px;
+border-left:2px solid #e94560
+}
 h1{color:#e94560}
 .room-title{color:#16c784;margin:10px 0}
 .visual-clues{
-display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
 gap:15px;margin-top:15px
 }
 .clue-image{
 background:rgba(255,255,255,.1);
-border:2px solid #16c784;border-radius:8px;
-height:180px;display:flex;flex-direction:column;
-align-items:center;justify-content:center;
-cursor:pointer;transition:.2s
+border:2px solid #16c784;
+border-radius:8px;
+height:180px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+transition:.2s
 }
-.clue-image:hover{border-color:#e94560;transform:scale(1.05)}
+.clue-image:hover{
+border-color:#e94560;
+transform:scale(1.05)
+}
 .timer{
-border:2px solid #e94560;padding:12px;border-radius:8px;
-text-align:center;font-family:monospace;font-size:22px;margin-bottom:15px
+border:2px solid #e94560;
+padding:12px;
+border-radius:8px;
+text-align:center;
+font-family:monospace;
+font-size:22px;
+margin-bottom:15px
 }
 input{
-padding:10px;border-radius:6px;border:2px solid #16c784;
-background:transparent;color:#fff;width:100%
+padding:10px;
+border-radius:6px;
+border:2px solid #16c784;
+background:transparent;
+color:#fff;
+width:100%
 }
 button{
-padding:10px 16px;background:#e94560;border:none;
-color:#fff;border-radius:6px;cursor:pointer;margin-top:10px
+padding:10px 16px;
+background:#e94560;
+border:none;
+color:#fff;
+border-radius:6px;
+cursor:pointer;
+margin-top:10px
 }
 .message.success{color:#16c784}
 .message.error{color:#e94560}
 .hint-button{
-margin-top:10px;cursor:pointer;color:#16c784;font-size:18px
+margin-top:10px;
+cursor:pointer;
+color:#16c784;
+font-size:18px
 }
-.hint-message{margin-top:6px;font-style:italic}
+.hint-message{
+margin-top:6px;
+font-style:italic
+}
 .next-room{
-margin-top:15px;background:#16c784;color:#000;font-weight:bold
+background:#16c784;
+color:#000;
+font-weight:bold;
+margin-top:15px
 }
 .play-again{
-margin-top:30px;font-size:32px;cursor:pointer;color:#16c784
+margin-top:30px;
+font-size:32px;
+cursor:pointer;
+color:#16c784
 }
 .image-modal{
-display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);
-align-items:center;justify-content:center
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.9);
+align-items:center;
+justify-content:center
 }
 .image-modal.active{display:flex}
 .modal-content{
-background:#0f3460;padding:30px;border-radius:10px;
-text-align:center;max-width:520px;position:relative
+background:#0f3460;
+padding:30px;
+border-radius:10px;
+text-align:center;
+max-width:520px;
+position:relative
 }
-.modal-close{position:absolute;top:10px;right:10px}
-.evidence-item{margin-bottom:6px;font-size:14px}
+.modal-close{
+position:absolute;
+top:10px;
+right:10px
+}
+.evidence-item{font-size:14px;margin-bottom:6px}
 .final-riddle{
-margin-top:30px;padding:20px;border:2px solid #16c784;border-radius:10px
+margin-top:30px;
+padding:20px;
+border:2px solid #16c784;
+border-radius:10px
 }
 </style>
 </head>
@@ -105,11 +168,20 @@ margin-top:30px;padding:20px;border:2px solid #16c784;border-radius:10px
 <audio id="successSound">
 <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3">
 </audio>
+<audio id="errorSound">
+<source src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3">
+</audio>
 
 <script>
 const gameState={
-currentRoom:0,hintsUsed:0,solved:new Set(),
-evidence:new Set(),timeRemaining:0,timer:null,roomFlags:{}
+currentRoom:0,
+hintsUsed:0,
+solved:new Set(),
+evidence:new Set(),
+timeRemaining:0,
+timer:null,
+roomFlags:{},
+cooldownActive:false
 };
 
 const rooms=[
@@ -125,7 +197,7 @@ visualClues:[
 ],
 puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
 evidence:"Security Log Extract",
-hint:"The clock and the note complete each other"
+hint:"The note and the clock complete each other"
 },
 {
 title:"Room 2: Suspect Interrogation",
@@ -139,7 +211,7 @@ visualClues:[
 ],
 puzzle:{question:"Who is lying? (Alex, Ben, Clara)",answer:"clara"},
 evidence:"Phone Records",
-hint:"Who benefits from time confusion?"
+hint:"Who benefits from confusion?"
 },
 {
 title:"Room 3: The Final Code",
@@ -153,42 +225,12 @@ visualClues:[
 ],
 puzzle:{question:"Enter the 4-digit code",answer:"1530"},
 evidence:"Confession Evidence",
-hint:"Use digits gathered earlier"
+hint:"Use digits from previous rooms"
 }
 ];
 
 function formatTime(s){
 return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
-}
-
-function loadRoom(i){
-if(i>=rooms.length){showFinalScreen();return;}
-gameState.currentRoom=i;
-gameState.timeRemaining=rooms[i].timeLimit;
-
-document.getElementById("roomTitle").textContent=rooms[i].title;
-document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
-
-document.getElementById("roomContent").innerHTML=`
-<p>${rooms[i].story}</p>
-<div class="visual-clues">
-${rooms[i].visualClues.map((c,idx)=>`
-<div class="clue-image" onclick="openImageModal(${idx})">
-<div style="font-size:60px">${c.emoji}</div>
-<div>${c.label}</div>
-</div>`).join("")}
-</div>
-
-<p>${rooms[i].puzzle.question}</p>
-<input id="answerInput">
-<button onclick="submitAnswer()">Submit</button>
-<div class="hint-button" onclick="showHint()">💡 Hint</div>
-<div id="hintMsg" class="hint-message"></div>
-<div id="message"></div>
-`;
-
-startTimer();
-updateSidebar();
 }
 
 function startTimer(){
@@ -199,33 +241,72 @@ document.getElementById("timerDisplay").textContent=`⏱ ${formatTime(gameState.
 },1000);
 }
 
-function submitAnswer(){
-const v=document.getElementById("answerInput").value.trim().toLowerCase();
-const r=rooms[gameState.currentRoom];
-const msg=document.getElementById("message");
+function loadRoom(i){
+if(i>=rooms.length){showFinalScreen();return;}
+gameState.currentRoom=i;
+gameState.timeRemaining=rooms[i].timeLimit;
+document.getElementById("roomTitle").textContent=rooms[i].title;
+document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
+document.getElementById("roomContent").innerHTML=`
+<p>${rooms[i].story}</p>
+<div class="visual-clues">
+${rooms[i].visualClues.map((c,idx)=>`
+<div class="clue-image" onclick="openImageModal(${idx})">
+<div style="font-size:60px">${c.emoji}</div>
+<div>${c.label}</div>
+</div>`).join("")}
+</div>
+<p>${rooms[i].puzzle.question}</p>
+<input id="answerInput">
+<button onclick="submitAnswer(event)">Submit</button>
+<div class="hint-button" onclick="showHint()">💡 Hint</div>
+<div id="hintMsg" class="hint-message"></div>
+<div id="message"></div>
+`;
+startTimer();
+updateSidebar();
+}
 
-if(v===r.puzzle.answer){
+function submitAnswer(e){
+const input=document.getElementById("answerInput");
+const btn=e.target;
+const msg=document.getElementById("message");
+const r=rooms[gameState.currentRoom];
+if(input.value.trim().toLowerCase()===r.puzzle.answer){
 msg.className="message success";
 msg.textContent="Correct!";
-document.getElementById("successSound").play();
+successSound.play();
 gameState.solved.add(gameState.currentRoom);
 gameState.evidence.add(r.evidence);
-
-document.getElementById("roomContent").innerHTML+=`
-<button class="next-room" onclick="nextRoom()">➡ Next Room</button>`;
+document.getElementById("roomContent").innerHTML+=
+`<button class="next-room" onclick="loadRoom(${gameState.currentRoom+1})">➡ Next Room</button>`;
 }else{
+errorSound.play();
+gameState.cooldownActive=true;
+input.disabled=true;
+btn.disabled=true;
+let t=30;
 msg.className="message error";
-msg.textContent="Incorrect! +30s penalty";
-gameState.timeRemaining+=30;
+const cd=setInterval(()=>{
+msg.textContent=`❌ Incorrect. Try again in ${t}s`;
+t--;
+if(t<0){
+clearInterval(cd);
+gameState.cooldownActive=false;
+input.disabled=false;
+btn.disabled=false;
+msg.textContent="You can try again now.";
+}
+},1000);
 }
 updateSidebar();
 }
 
-function nextRoom(){
-loadRoom(gameState.currentRoom+1);
-}
-
 function showHint(){
+if(gameState.cooldownActive){
+document.getElementById("hintMsg").textContent="⛔ Hint locked during cooldown";
+return;
+}
 document.getElementById("hintMsg").textContent=rooms[gameState.currentRoom].hint;
 gameState.hintsUsed++;
 gameState.timeRemaining=Math.max(gameState.timeRemaining-60,0);
@@ -233,9 +314,9 @@ updateSidebar();
 }
 
 function openImageModal(i){
-const clue=rooms[gameState.currentRoom].visualClues[i];
-document.getElementById("modalImage").textContent=clue.emoji;
-document.getElementById("modalDescription").textContent=clue.description;
+const c=rooms[gameState.currentRoom].visualClues[i];
+document.getElementById("modalImage").textContent=c.emoji;
+document.getElementById("modalDescription").textContent=c.description;
 document.getElementById("imageModal").classList.add("active");
 }
 function closeImageModal(){
@@ -244,7 +325,7 @@ document.getElementById("imageModal").classList.remove("active");
 
 function showFinalScreen(){
 document.getElementById("gameContainer").innerHTML=`
-<div style="text-align:center;padding:40px">
+<div style="padding:40px;text-align:center">
 <h1 style="color:#16c784">🏆 Case Closed!</h1>
 <div class="final-riddle">
 <p><em>No wires in sight, yet minds are linked…</em></p>
@@ -259,8 +340,7 @@ document.getElementById("gameContainer").innerHTML=`
 function checkRiddle(){
 const v=document.getElementById("riddleInput").value.toLowerCase();
 document.getElementById("riddleMsg").textContent=
-["internet lab","internetlab"].includes(v)
-?"✅ Correct!":"❌ Try again";
+["internet lab","internetlab"].includes(v)?"✅ Correct!":"❌ Try again";
 }
 
 function updateSidebar(){
