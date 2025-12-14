@@ -39,6 +39,20 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
 .modal-close{position:absolute;top:10px;right:10px}
 .evidence-item{margin-bottom:6px;font-size:14px}
 .final-riddle{margin-top:30px;padding:20px;border:2px solid #16c784;border-radius:10px}
+.play-again-btn{
+margin-top:20px;
+padding:12px 20px;
+background:#16c784;
+border:none;
+color:#fff;
+font-size:18px;
+border-radius:8px;
+cursor:pointer;
+transition:.2s;
+}
+.play-again-btn:hover{
+background:#13a76d;
+}
 </style>
 </head>
 
@@ -70,89 +84,86 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
   </div>
 </div>
 
+<!-- ✅ SUCCESS SOUND -->
 <audio id="successSound" preload="auto">
   <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" type="audio/mpeg">
 </audio>
 
 <script>
 /* ================= GAME DATA ================= */
-
-const gameState={currentRoom:0,hintsUsed:0,solved:new Set(),evidence:new Set(),
-timeRemaining:0,timer:null,roomFlags:{}};
+const gameState={
+  currentRoom:0,
+  hintsUsed:0,
+  solved:new Set(),
+  evidence:new Set(),
+  timeRemaining:0,
+  timer:null,
+  roomFlags:{}
+};
 
 const rooms=[
 {
-title:"Room 1: The Crime Scene",
-timeLimit:300, // 5 minutes
-story:"A diamond vanished. Investigate visual clues.",
-visualClues:[
-{emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
-{emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
-{emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
-{emoji:"📊",label:"Security Log",description:"Access recorder shows 3 members visited"}
-],
-puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
-evidence:"Security Log Extract",
-hints:["Look at the clock carefully.","Check security logs for exact time."]
+  title:"Room 1: The Crime Scene",
+  timeLimit:300, // 5 minutes
+  story:"A diamond vanished. Investigate visual clues.",
+  visualClues:[
+    {emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
+    {emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
+    {emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
+    {emoji:"📊",label:"Security Log",description:"Access recorded at 15:30"}
+  ],
+  puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
+  evidence:"Security Log Extract",
+  hints:["Look at the clock carefully.","Check security logs for exact time."]
 },
 {
-title:"Room 2: Suspect Interrogation",
-timeLimit:180,
-story:"Study suspects and alibis.",
-visualClues:[
-{emoji:"👨",label:"Alex",description:"Left shop at 3:15"},
-{emoji:"👮",label:"Ben",description:"Watch time mismatched"},
-{emoji:"👩",label:"Clara",description:"Call forwarded at 3:15"},
-{emoji:"📹",label:"Camera",description:"Blurred figure in guard jacket"}
-],
-puzzle:{question:"Who is lying? (Alex, Ben, Clara)",answer:"clara"},
-evidence:"Phone Records",
-hints:["Compare times mentioned by suspects.","Check the forwarded call logs."]
+  title:"Room 2: Suspect Interrogation",
+  timeLimit:180,
+  story:"Study suspects and alibis.",
+  visualClues:[
+    {emoji:"👨",label:"Alex",description:"Left shop at 3:15"},
+    {emoji:"👮",label:"Ben",description:"Watch time mismatched"},
+    {emoji:"👩",label:"Clara",description:"Call forwarded at 3:15"},
+    {emoji:"📹",label:"Camera",description:"Blurred figure in guard jacket"}
+  ],
+  puzzle:{question:"Who is lying? (Alex, Ben, Clara)",answer:"clara"},
+  evidence:"Phone Records",
+  hints:["Compare their alibis carefully.","Notice the phone records."]
 },
 {
-title:"Room 3: The Final Code",
-timeLimit:120,
-story:"Combine everything to unlock the vault.",
-visualClues:[
-{emoji:"🏛",label:"Digit 1",description:"One pillar"},
-{emoji:"⭐",label:"Digit 5",description:"Five-point star"},
-{emoji:"🔺",label:"Digit 3",description:"Three barriers"},
-{emoji:"🔐",label:"Digit 0",description:"Round lock"}
-],
-puzzle:{question:"Enter the 4-digit code",answer:"1530"},
-evidence:"Confession Evidence",
-hints:["Use digits from all visual clues.","The order matters."]
+  title:"Room 3: The Final Code",
+  timeLimit:120,
+  story:"Combine everything to unlock the vault.",
+  visualClues:[
+    {emoji:"🏛",label:"Digit 1",description:"One pillar"},
+    {emoji:"⭐",label:"Digit 5",description:"Five-point star"},
+    {emoji:"🔺",label:"Digit 3",description:"Three barriers"},
+    {emoji:"🔐",label:"Digit 0",description:"Round lock"}
+  ],
+  puzzle:{question:"Enter the 4-digit code",answer:"1530"},
+  evidence:"Confession Evidence",
+  hints:["Use clues from previous rooms.","Check patterns in visual clues."]
 }
 ];
 
 /* ================= CORE LOGIC ================= */
-
 function formatTime(s){
-const m=Math.floor(s/60);
-const sec=s%60;
-return `${m}:${sec<10?"0":""}${sec}`;
+  const m=Math.floor(s/60);
+  const sec=s%60;
+  return `${m}:${sec<10?"0":""}${sec}`;
 }
 
 function loadRoom(i){
-if(i>=rooms.length){showFinalScreen();return;}
-if(!gameState.roomFlags[i]){
-gameState.roomFlags[i]={uvCooldown:0,uvInterval:null,noteRevealed:false};
-}
-
-gameState.currentRoom=i;
-gameState.timeRemaining=rooms[i].timeLimit;
-
-document.getElementById("roomTitle").textContent=rooms[i].title;
-document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
-
-let hintsHTML="";
-if(rooms[i].hints && rooms[i].hints.length>0){
-hintsHTML="<p><strong>Hints:</strong></p><ul>"+rooms[i].hints.map(h=>`<li>${h}</li>`).join("")+"</ul>";
-}
-
-document.getElementById("roomContent").innerHTML=`
+  if(i>=rooms.length){showFinalScreen();return;}
+  if(!gameState.roomFlags[i]){
+    gameState.roomFlags[i]={uvCooldown:0,uvInterval:null,noteRevealed:false};
+  }
+  gameState.currentRoom=i;
+  gameState.timeRemaining=rooms[i].timeLimit;
+  document.getElementById("roomTitle").textContent=rooms[i].title;
+  document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
+  document.getElementById("roomContent").innerHTML=`
 <p>${rooms[i].story}</p>
-${hintsHTML}
 <div class="visual-clues">
 ${rooms[i].visualClues.map((c,idx)=>`
 <div class="clue-image" onclick="openImageModal(${idx})">
@@ -160,114 +171,123 @@ ${rooms[i].visualClues.map((c,idx)=>`
 <div>${c.label}</div>
 </div>`).join("")}
 </div>
-
 <div style="margin-top:20px">
 <p>${rooms[i].puzzle.question}</p>
 <input id="answerInput"/>
 <button onclick="submitAnswer()">Submit</button>
+<button onclick="showHint()">Hint</button>
 <div id="message"></div>
+<div id="hintMsg" style="margin-top:10px;color:#16c784"></div>
 </div>
 `;
-
-startTimer();
-updateSidebar();
+  startTimer();
+  updateSidebar();
 }
 
+/* ================= TIMER ================= */
 function startTimer(){
-clearInterval(gameState.timer);
-const d=document.getElementById("timerDisplay");
-gameState.timer=setInterval(()=>{
-gameState.timeRemaining--;
-d.textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
-if(gameState.timeRemaining<=0){
-clearInterval(gameState.timer);
-nextRoom();
-}
-},1000);
+  clearInterval(gameState.timer);
+  const d=document.getElementById("timerDisplay");
+  gameState.timer=setInterval(()=>{
+    gameState.timeRemaining--;
+    d.textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
+    if(gameState.timeRemaining<=0){
+      clearInterval(gameState.timer);
+      nextRoom();
+    }
+  },1000);
 }
 
+/* ================= ANSWER SUBMISSION ================= */
 function submitAnswer(){
-const v=document.getElementById("answerInput").value.trim().toLowerCase();
-const r=rooms[gameState.currentRoom];
-const m=document.getElementById("message");
+  const v=document.getElementById("answerInput").value.trim().toLowerCase();
+  const r=rooms[gameState.currentRoom];
+  const m=document.getElementById("message");
 
-if(v===r.puzzle.answer){
-m.className="message success";
-m.textContent="Correct!";
-const sound = document.getElementById("successSound");
-if(sound){sound.currentTime=0; sound.play().catch(()=>{});}
-gameState.solved.add(gameState.currentRoom);
-gameState.evidence.add(r.evidence);
-setTimeout(nextRoom,800);
-}else{
-m.className="message error";
-m.textContent="Incorrect! 30s penalty added.";
-gameState.timeRemaining+=30;
-updateSidebar();
-}
+  if(v===r.puzzle.answer){
+    m.className="message success";
+    m.textContent="Correct!";
+    const sound = document.getElementById("successSound");
+    if(sound){sound.currentTime=0; sound.play().catch(()=>{});}
+    gameState.solved.add(gameState.currentRoom);
+    gameState.evidence.add(r.evidence);
+    setTimeout(nextRoom,800);
+  } else {
+    m.className="message error";
+    m.textContent="Incorrect! +30s penalty.";
+    gameState.timeRemaining += 30; // 30-second penalty
+  }
+  updateSidebar();
 }
 
 function nextRoom(){
-clearInterval(gameState.timer);
-loadRoom(gameState.currentRoom+1);
+  clearInterval(gameState.timer);
+  loadRoom(gameState.currentRoom+1);
 }
 
-/* ================= UV MECHANIC WITH LIVE COUNTDOWN ================= */
+/* ================= HINT ================= */
+function showHint(){
+  const r=rooms[gameState.currentRoom];
+  const msg=document.getElementById("hintMsg");
+  if(r.hints && r.hints.length>0){
+    msg.textContent=r.hints[gameState.hintsUsed % r.hints.length];
+    gameState.hintsUsed++;
+    updateSidebar();
+  }
+}
 
+/* ================= UV MECHANIC ================= */
 function openImageModal(idx){
-const roomIndex=gameState.currentRoom;
-const clue=rooms[roomIndex].visualClues[idx];
-const flags=gameState.roomFlags[roomIndex];
+  const roomIndex=gameState.currentRoom;
+  const clue=rooms[roomIndex].visualClues[idx];
+  const flags=gameState.roomFlags[roomIndex];
+  document.getElementById("modalImage").textContent=clue.emoji;
+  const desc=document.getElementById("modalDescription");
+  const actions=document.getElementById("modalActions");
+  actions.innerHTML="";
 
-document.getElementById("modalImage").textContent=clue.emoji;
-const desc=document.getElementById("modalDescription");
-const actions=document.getElementById("modalActions");
-actions.innerHTML="";
+  if(roomIndex===0 && clue.label==="Note Found"){
+    if(flags.noteRevealed){
+      desc.innerHTML="<strong>Revealed note:</strong> Meet at 15:30";
+    } else if(flags.uvCooldown>0){
+      desc.innerHTML=`${clue.description}<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
+    } else {
+      desc.textContent=clue.description;
+      const btn=document.createElement("button");
+      btn.textContent="Inspect with UV Lamp";
+      btn.onclick=()=>startUV(roomIndex);
+      actions.appendChild(btn);
+    }
+  } else {
+    desc.textContent=clue.description;
+  }
 
-if(roomIndex===0 && clue.label==="Note Found"){
-if(flags.noteRevealed){
-desc.innerHTML="<strong>Revealed note:</strong> Meet at 15:30";
-}else if(flags.uvCooldown>0){
-desc.innerHTML=`${clue.description}<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
-}else{
-desc.textContent=clue.description;
-const btn=document.createElement("button");
-btn.textContent="Inspect with UV Lamp";
-btn.onclick=()=>startUV(roomIndex);
-actions.appendChild(btn);
-}
-}else{
-desc.textContent=clue.description;
-}
-
-document.getElementById("imageModal").classList.add("active");
+  document.getElementById("imageModal").classList.add("active");
 }
 
 function startUV(roomIndex){
-const flags=gameState.roomFlags[roomIndex];
-flags.uvCooldown=120; // 2 minutes
-const desc=document.getElementById("modalDescription");
-
-flags.uvInterval=setInterval(()=>{
-flags.uvCooldown--;
-if(flags.uvCooldown>0){
-desc.innerHTML=`UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
-}else{
-clearInterval(flags.uvInterval);
-flags.noteRevealed=true;
-desc.innerHTML="<strong>Revealed note:</strong> Meet at 15:30";
-}
-},1000);
+  const flags=gameState.roomFlags[roomIndex];
+  flags.uvCooldown=120; // 2 mins
+  flags.uvInterval=setInterval(()=>{
+    flags.uvCooldown--;
+    if(flags.uvCooldown<=0){
+      clearInterval(flags.uvInterval);
+      flags.noteRevealed=true;
+      closeImageModal();
+      openImageModal(0); // reopen to show revealed note
+    }
+    const desc=document.getElementById("modalDescription");
+    desc.innerHTML=`Meet at 1_:3_<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
+  },1000);
 }
 
 function closeImageModal(){
-document.getElementById("imageModal").classList.remove("active");
+  document.getElementById("imageModal").classList.remove("active");
 }
 
 /* ================= FINAL SCREEN + RIDDLE ================= */
-
 function showFinalScreen(){
-document.getElementById("gameContainer").innerHTML=`
+  document.getElementById("gameContainer").innerHTML=`
 <div style="padding:40px">
 <h1 style="color:#16c784">🏆 Case Closed!</h1>
 <p>You solved ${gameState.solved.size}/${rooms.length} rooms.</p>
@@ -282,45 +302,54 @@ A room where signals are tested and synced.<br>
 <button onclick="checkRiddle()">Submit</button>
 <div id="riddleMsg"></div>
 </div>
+<button class="play-again-btn" onclick="restartGame()">🔄 Play Again</button>
 </div>
 `;
 }
 
-function checkRiddle(){
-const v=document.getElementById("riddleInput").value.trim().toLowerCase();
-const m=document.getElementById("riddleMsg");
-const accepted=["internet lab","the internet lab","internetlab","internet-lab"];
-
-if(accepted.includes(v)){
-m.className="message success";
-m.textContent="✅ Correct! This is the Internet Lab.";
-const sound = document.getElementById("successSound");
-if(sound){sound.currentTime=0; sound.play().catch(()=>{});}
-document.getElementById("riddleInput").disabled=true;
-}else{
-m.className="message error";
-m.textContent="❌ Not quite. Try again.";
+function restartGame(){
+  // Reset game state
+  gameState.currentRoom=0;
+  gameState.hintsUsed=0;
+  gameState.solved.clear();
+  gameState.evidence.clear();
+  gameState.roomFlags={};
+  loadRoom(0);
 }
+
+function checkRiddle(){
+  const v=document.getElementById("riddleInput").value.trim().toLowerCase();
+  const m=document.getElementById("riddleMsg");
+  const accepted=["internet lab","the internet lab","internetlab","internet-lab"];
+  if(accepted.includes(v)){
+    m.className="message success";
+    m.textContent="✅ Correct! This is the Internet Lab.";
+    const sound = document.getElementById("successSound");
+    if(sound){sound.currentTime=0; sound.play().catch(()=>{});}
+    document.getElementById("riddleInput").disabled=true;
+  } else {
+    m.className="message error";
+    m.textContent="❌ Not quite. Try again.";
+  }
 }
 
 /* ================= SIDEBAR ================= */
-
 function updateSidebar(){
-document.getElementById("hintsUsed").textContent=gameState.hintsUsed;
-document.getElementById("progressText").textContent=
-`${Math.round(gameState.solved.size/rooms.length*100)}% Complete`;
-document.getElementById("evidenceList").innerHTML=
-rooms.map(r=>`
+  document.getElementById("hintsUsed").textContent=gameState.hintsUsed;
+  document.getElementById("progressText").textContent=
+  `${Math.round(gameState.solved.size/rooms.length*100)}% Complete`;
+  document.getElementById("evidenceList").innerHTML=
+  rooms.map(r=>`
 <div class="evidence-item">
 ${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}
 </div>`).join("");
 }
 
 /* ================= START ================= */
-
 loadRoom(0);
 </script>
 
 </body>
 </html>
+
 
