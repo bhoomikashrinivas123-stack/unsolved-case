@@ -35,9 +35,10 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
 .message.error{color:#e94560}
 .image-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);align-items:center;justify-content:center}
 .image-modal.active{display:flex}
-.modal-content{background:#0f3460;padding:30px;border-radius:10px;text-align:center;max-width:500px}
+.modal-content{background:#0f3460;padding:30px;border-radius:10px;text-align:center;max-width:520px}
 .modal-close{position:absolute;top:10px;right:10px}
 .evidence-item{margin-bottom:6px;font-size:14px}
+.final-riddle{margin-top:30px;padding:20px;border:2px solid #16c784;border-radius:10px}
 </style>
 </head>
 
@@ -70,6 +71,8 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
 </div>
 
 <script>
+/* ================= GAME DATA ================= */
+
 const gameState={
 currentRoom:0,hintsUsed:0,solved:new Set(),evidence:new Set(),
 timeRemaining:0,timer:null,
@@ -118,6 +121,8 @@ evidence:"Confession Evidence"
 }
 ];
 
+/* ================= CORE LOGIC ================= */
+
 function formatTime(s){
 const m=Math.floor(s/60);
 const sec=s%60;
@@ -125,19 +130,21 @@ return `${m}:${sec<10?"0":""}${sec}`;
 }
 
 function loadRoom(i){
-if(i>=rooms.length){endGame();return;}
-gameState.currentRoom=i;
-gameState.timeRemaining=rooms[i].timeLimit;
+if(i>=rooms.length){showFinalScreen();return;}
 
 if(!gameState.roomFlags[i]){
 gameState.roomFlags[i]={uvCooldown:0,uvInterval:null,noteRevealed:false};
 }
+
+gameState.currentRoom=i;
+gameState.timeRemaining=rooms[i].timeLimit;
 
 document.getElementById("roomTitle").textContent=rooms[i].title;
 document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
 
 document.getElementById("roomContent").innerHTML=`
 <p>${rooms[i].story}</p>
+
 <div class="visual-clues">
 ${rooms[i].visualClues.map((c,idx)=>`
 <div class="clue-image" onclick="openImageModal(${idx})">
@@ -151,7 +158,8 @@ ${rooms[i].visualClues.map((c,idx)=>`
 <input id="answerInput"/>
 <button onclick="submitAnswer()">Submit</button>
 <div id="message"></div>
-</div>`;
+</div>
+`;
 
 startTimer();
 updateSidebar();
@@ -174,6 +182,7 @@ function submitAnswer(){
 const v=document.getElementById("answerInput").value.trim().toLowerCase();
 const r=rooms[gameState.currentRoom];
 const m=document.getElementById("message");
+
 if(v===r.puzzle.answer){
 m.className="message success";
 m.textContent="Correct!";
@@ -186,6 +195,13 @@ m.textContent="Incorrect!";
 }
 updateSidebar();
 }
+
+function nextRoom(){
+clearInterval(gameState.timer);
+loadRoom(gameState.currentRoom+1);
+}
+
+/* ================= UV MECHANIC ================= */
 
 function openImageModal(idx){
 const roomIndex=gameState.currentRoom;
@@ -219,7 +235,6 @@ document.getElementById("imageModal").classList.add("active");
 function startUV(roomIndex){
 const flags=gameState.roomFlags[roomIndex];
 flags.uvCooldown=90;
-
 flags.uvInterval=setInterval(()=>{
 flags.uvCooldown--;
 if(flags.uvCooldown<=0){
@@ -233,10 +248,47 @@ function closeImageModal(){
 document.getElementById("imageModal").classList.remove("active");
 }
 
-function nextRoom(){
-clearInterval(gameState.timer);
-loadRoom(gameState.currentRoom+1);
+/* ================= FINAL SCREEN + RIDDLE ================= */
+
+function showFinalScreen(){
+document.getElementById("gameContainer").innerHTML=`
+<div style="padding:40px">
+<h1 style="color:#16c784">🏆 Case Closed!</h1>
+
+<p>You solved ${gameState.solved.size}/${rooms.length} rooms.</p>
+
+<div class="final-riddle">
+<h3>🧩 Bonus Riddle</h3>
+<p style="font-style:italic">
+No wires in sight, yet minds are linked,<br>
+A room where signals are tested and synced.<br>
+<strong>Name this place.</strong>
+</p>
+
+<input id="riddleInput" placeholder="Enter answer..." />
+<button onclick="checkRiddle()">Submit</button>
+<div id="riddleMsg"></div>
+</div>
+</div>
+`;
 }
+
+function checkRiddle(){
+const v=document.getElementById("riddleInput").value.trim().toLowerCase();
+const m=document.getElementById("riddleMsg");
+const accepted=["internet lab","the internet lab","internetlab","internet-lab"];
+
+if(accepted.includes(v)){
+m.className="message success";
+m.textContent="✅ Correct! This is the Internet Lab.";
+document.getElementById("riddleInput").disabled=true;
+}else{
+m.className="message error";
+m.textContent="❌ Not quite. Try again.";
+}
+}
+
+/* ================= SIDEBAR ================= */
 
 function updateSidebar(){
 document.getElementById("hintsUsed").textContent=gameState.hintsUsed;
@@ -249,13 +301,11 @@ ${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}
 </div>`).join("");
 }
 
-function endGame(){
-document.getElementById("gameContainer").innerHTML=
-"<h1 style='padding:40px;color:#16c784'>🏆 Case Closed!</h1>";
-}
+/* ================= START ================= */
 
 loadRoom(0);
 </script>
 
 </body>
 </html>
+
