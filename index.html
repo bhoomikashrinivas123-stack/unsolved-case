@@ -35,14 +35,17 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
 .message.error{color:#e94560}
 .image-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);align-items:center;justify-content:center}
 .image-modal.active{display:flex}
-.modal-content{background:#0f3460;padding:30px;border-radius:10px;text-align:center;max-width:520px}
-.modal-close{position:absolute;top:10px;right:10px}
+.modal-content{background:#0f3460;padding:30px;border-radius:10px;text-align:center;max-width:520px;position:relative}
+.modal-close{position:absolute;top:10px;right:10px;background:#e94560;border:none;color:#fff;padding:5px 10px;border-radius:6px;cursor:pointer}
 .evidence-item{margin-bottom:6px;font-size:14px}
 .final-riddle{margin-top:30px;padding:20px;border:2px solid #16c784;border-radius:10px}
-.hint-button{display:flex;align-items:center;margin-top:10px;cursor:pointer;color:#16c784}
-.hint-button span{margin-left:6px}
+.hint-button{
+  display:flex;align-items:center;margin-top:10px;cursor:pointer;color:#16c784;font-size:18px;
+}
 .hint-message{margin-top:6px;font-size:14px;color:#fff;font-style:italic}
-.play-again{margin-top:20px;cursor:pointer;font-size:30px;}
+.play-again{
+  margin-top:20px;cursor:pointer;font-size:30px;color:#16c784;
+}
 </style>
 </head>
 
@@ -74,7 +77,6 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
   </div>
 </div>
 
-<!-- ✅ SUCCESS SOUND -->
 <audio id="successSound" preload="auto">
   <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" type="audio/mpeg">
 </audio>
@@ -139,7 +141,7 @@ return `${m}:${sec<10?"0":""}${sec}`;
 function loadRoom(i){
 if(i>=rooms.length){showFinalScreen();return;}
 if(!gameState.roomFlags[i]){
-gameState.roomFlags[i]={uvCooldown:0,uvInterval:null,noteRevealed:false};
+gameState.roomFlags[i]={uvCooldown:0,uvInterval:null,noteRevealed:false,hintUsed:false};
 }
 
 gameState.currentRoom=i;
@@ -163,7 +165,7 @@ ${rooms[i].visualClues.map((c,idx)=>`
 <p>${rooms[i].puzzle.question}</p>
 <input id="answerInput"/>
 <button onclick="submitAnswer()">Submit</button>
-<button class="hint-button" onclick="showHint()">💡 Hint</button>
+${!gameState.roomFlags[i].hintUsed?'<div class="hint-button" onclick="showHint()">💡 Hint</div>':''}
 <div id="hintMsg" class="hint-message"></div>
 <div id="message"></div>
 </div>
@@ -244,7 +246,7 @@ document.getElementById("imageModal").classList.add("active");
 
 function startUV(roomIndex){
 const flags=gameState.roomFlags[roomIndex];
-flags.uvCooldown=120; // 2 mins
+flags.uvCooldown=120;
 flags.uvInterval=setInterval(()=>{
 flags.uvCooldown--;
 if(flags.uvCooldown<=0){
@@ -265,9 +267,13 @@ function showHint(){
 const r=rooms[gameState.currentRoom];
 document.getElementById("hintMsg").textContent=r.hint;
 gameState.hintsUsed++;
-// Deduct 1 minute from timer
+gameState.roomFlags[gameState.currentRoom].hintUsed = true;
+// Deduct 1 min
 gameState.timeRemaining = Math.max(gameState.timeRemaining - 60, 0);
 updateSidebar();
+// Remove the hint button
+const hintBtn = document.querySelector(".hint-button");
+if(hintBtn){hintBtn.remove();}
 }
 
 /* ================= FINAL SCREEN + RIDDLE ================= */
