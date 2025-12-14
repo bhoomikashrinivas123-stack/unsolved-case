@@ -35,14 +35,14 @@ button{padding:10px 16px;background:#e94560;border:none;color:#fff;border-radius
 .message.error{color:#e94560}
 .image-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);align-items:center;justify-content:center}
 .image-modal.active{display:flex}
-.modal-content{background:#0f3460;padding:30px;border-radius:10px;text-align:center;max-width:520px}
+.modal-content{background:#0f3460;padding:30px;border-radius:10px;text-align:center;max-width:520px;position:relative}
 .modal-close{position:absolute;top:10px;right:10px}
 .evidence-item{margin-bottom:6px;font-size:14px}
 .final-riddle{margin-top:30px;padding:20px;border:2px solid #16c784;border-radius:10px}
 .hint-button{display:flex;align-items:center;margin-top:10px;cursor:pointer;color:#16c784}
 .hint-button span{margin-left:6px}
 .hint-message{margin-top:6px;font-size:14px;color:#fff;font-style:italic}
-.play-again{margin-top:20px;cursor:pointer;font-size:30px;color:#16c784}
+.play-again{margin-top:20px;cursor:pointer;font-size:30px;color:#e94560}
 </style>
 </head>
 
@@ -86,13 +86,13 @@ timeRemaining:0,timer:null,roomFlags:{}};
 const rooms=[
 {
 title:"Room 1: The Crime Scene",
-timeLimit:300, // 5 minutes
+timeLimit:300, // 5 mins
 story:"A diamond vanished. Investigate visual clues.",
 visualClues:[
 {emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
 {emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
 {emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
-{emoji:"📊",label:"Security Log",description:"Security camera captured suspicious activity near the vault"}
+{emoji:"📊",label:"Security Log",description:"Security camera captured suspicious activity near the vault"} // Updated
 ],
 puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
 evidence:"Security Log Extract",
@@ -162,7 +162,7 @@ ${rooms[i].visualClues.map((c,idx)=>`
 <p>${rooms[i].puzzle.question}</p>
 <input id="answerInput"/>
 <button onclick="submitAnswer()">Submit</button>
-<div class="hint-button" onclick="showHint()">💡 Hint</div>
+<button class="hint-button" onclick="showHint()">💡 Hint</button>
 <div id="hintMsg" class="hint-message"></div>
 <div id="message"></div>
 </div>
@@ -264,7 +264,8 @@ function showHint(){
 const r=rooms[gameState.currentRoom];
 document.getElementById("hintMsg").textContent=r.hint;
 gameState.hintsUsed++;
-gameState.timeRemaining = Math.max(gameState.timeRemaining - 60, 0);
+// Deduct 1 minute
+gameState.timeRemaining=Math.max(gameState.timeRemaining-60,0);
 updateSidebar();
 }
 
@@ -337,4 +338,3 @@ loadRoom(0);
 
 </body>
 </html>
-
