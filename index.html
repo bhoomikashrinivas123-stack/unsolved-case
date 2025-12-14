@@ -176,7 +176,6 @@ updateSidebar();
 function startTimer(){
 clearInterval(gameState.timer);
 const d=document.getElementById("timerDisplay");
-d.textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
 gameState.timer=setInterval(()=>{
 gameState.timeRemaining--;
 d.textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
@@ -204,7 +203,6 @@ setTimeout(nextRoom,800);
 m.className="message error";
 m.textContent="Incorrect! +30s penalty";
 gameState.timeRemaining+=30;
-updateTimerDisplay();
 }
 updateSidebar();
 }
@@ -269,12 +267,7 @@ document.getElementById("hintMsg").textContent=r.hint;
 gameState.hintsUsed++;
 // Deduct 1 minute from timer
 gameState.timeRemaining = Math.max(gameState.timeRemaining - 60, 0);
-updateTimerDisplay();
 updateSidebar();
-}
-
-function updateTimerDisplay(){
-document.getElementById("timerDisplay").textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
 }
 
 /* ================= FINAL SCREEN + RIDDLE ================= */
