@@ -46,7 +46,7 @@ h1{color:#e94560}
   padding:10px;border-radius:8px;
   font-family:monospace;margin-bottom:10px
 }
-input,button{
+button,input{
   padding:10px;margin-top:8px;
   border-radius:6px;border:none
 }
@@ -67,12 +67,12 @@ button{background:#e94560;color:#fff;cursor:pointer}
   background:#e94560;color:#fff;
   padding:5px 10px;border-radius:6px
 }
-.message.success{color:#16c784}
-.message.error{color:#e94560}
 .play-again{
   margin-top:25px;font-size:28px;
   color:#16c784;cursor:pointer
 }
+.message.success{color:#16c784}
+.message.error{color:#e94560}
 </style>
 </head>
 
@@ -85,10 +85,10 @@ button{background:#e94560;color:#fff;cursor:pointer}
     <div class="timer" id="timerDisplay"></div>
     <div id="roomContent"></div>
   </div>
+
   <div class="sidebar">
     <p><strong>Room:</strong> <span id="roomNumber"></span></p>
-    <p><strong>Hints:</strong> <span id="hintsUsed">0</span></p>
-    <p id="progressText">0% Complete</p>
+    <p><strong>Progress:</strong> <span id="progressText">0%</span></p>
     <h3>Evidence</h3>
     <div id="evidenceList"></div>
   </div>
@@ -97,8 +97,8 @@ button{background:#e94560;color:#fff;cursor:pointer}
 <div class="image-modal" id="imageModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeImageModal()">X</button>
-    <div id="modalImage" style="font-size:100px"></div>
-    <div id="modalDescription"></div>
+    <div id="modalImage" style="font-size:90px"></div>
+    <div id="modalDescription" style="margin-top:10px"></div>
     <div id="modalActions"></div>
   </div>
 </div>
@@ -118,8 +118,7 @@ const rooms=[
   {emoji:"📊",desc:"Security log empty"}
  ],
  answer:"15:30",
- evidence:"Security Log",
- hint:"Clock + Note"
+ evidence:"Security Log"
 },
 {
  title:"Room 2: Suspects",
@@ -132,8 +131,7 @@ const rooms=[
   {emoji:"📹",desc:"Blurred guard"}
  ],
  answer:"clara",
- evidence:"Phone Records",
- hint:"Compare times"
+ evidence:"Phone Records"
 },
 {
  title:"Room 3: Final Code",
@@ -146,8 +144,7 @@ const rooms=[
   {emoji:"🔐",desc:"Round lock"}
  ],
  answer:"1530",
- evidence:"Confession",
- hint:"Digits from before"
+ evidence:"Confession"
 }
 ];
 
@@ -157,10 +154,9 @@ function resetGame(){
   room:0,
   solved:new Set(),
   evidence:new Set(),
-  hints:0,
   time:0,
   timer:null,
-  uv:{active:false,cooldown:0,interval:null,revealed:false}
+  uv:{revealed:false,interval:null}
  };
  loadRoom(0);
 }
@@ -169,20 +165,21 @@ function loadRoom(i){
  if(i>=rooms.length){finalScreen();return;}
  gameState.room=i;
  gameState.time=rooms[i].timeLimit;
+
  document.getElementById("roomTitle").textContent=rooms[i].title;
- document.getElementById("roomNumber").textContent=`${i+1}/3`;
+ document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
 
  document.getElementById("roomContent").innerHTML=`
  <p>${rooms[i].story}</p>
  <div class="visual-clues">
- ${rooms[i].visualClues.map((c,idx)=>`
-  <div class="clue-image" onclick="openClue(${idx})">
-   <div style="font-size:50px">${c.emoji}</div>
-  </div>`).join("")}
+  ${rooms[i].visualClues.map((c,idx)=>`
+   <div class="clue-image" onclick="openClue(${idx})">
+    <div style="font-size:50px">${c.emoji}</div>
+   </div>`).join("")}
  </div>
- <p>${rooms[i].answer==="1530"?"Enter code":"Answer:"}</p>
+ <p>Answer:</p>
  <input id="answerInput">
- <button onclick="submit()">Submit</button>
+ <button onclick="submitAnswer()">Submit</button>
  <div id="msg"></div>
  `;
  startTimer();
@@ -199,53 +196,54 @@ function startTimer(){
 
 function openClue(idx){
  const modal=document.getElementById("imageModal");
- document.getElementById("modalImage").textContent=rooms[gameState.room].visualClues[idx].emoji;
+ const clue=rooms[gameState.room].visualClues[idx];
  const desc=document.getElementById("modalDescription");
  const actions=document.getElementById("modalActions");
- actions.innerHTML="";
 
+ desc.innerHTML="";
+ actions.innerHTML="";
+ document.getElementById("modalImage").textContent=clue.emoji;
+
+ // 🔒 UV ONLY HERE
  if(gameState.room===0 && idx===0){
   if(gameState.uv.revealed){
    desc.innerHTML="<strong>Meet at 15:30</strong>";
-  }else if(gameState.uv.active){
-   desc.innerHTML=`Inspecting... ${gameState.uv.cooldown}s`;
   }else{
-   desc.textContent="Meet at 1_:3_";
+   desc.textContent=clue.desc;
    const b=document.createElement("button");
    b.textContent="Use UV Lamp";
    b.onclick=startUV;
    actions.appendChild(b);
   }
  }else{
-  desc.textContent=rooms[gameState.room].visualClues[idx].desc;
+  desc.textContent=clue.desc;
  }
+
  modal.classList.add("active");
 }
 
 function startUV(){
- gameState.uv.active=true;
- gameState.uv.cooldown=10;
+ const desc=document.getElementById("modalDescription");
+ let countdown=10;
+
+ clearInterval(gameState.uv.interval);
  gameState.uv.interval=setInterval(()=>{
-  gameState.uv.cooldown--;
-  if(gameState.uv.cooldown<=0){
+  countdown--;
+  desc.innerHTML=`Inspecting... ${countdown}s`;
+  if(countdown<=0){
    clearInterval(gameState.uv.interval);
    gameState.uv.revealed=true;
-   gameState.uv.active=false;
-   document.getElementById("modalDescription").innerHTML="<strong>Meet at 15:30</strong>";
+   desc.innerHTML="<strong>Meet at 15:30</strong>";
   }
  },1000);
 }
 
 function closeImageModal(){
  document.getElementById("imageModal").classList.remove("active");
- if(gameState.uv.interval){
-  clearInterval(gameState.uv.interval);
-  gameState.uv.interval=null;
-  gameState.uv.active=false;
- }
+ clearInterval(gameState.uv.interval);
 }
 
-function submit(){
+function submitAnswer(){
  const v=document.getElementById("answerInput").value.toLowerCase();
  const m=document.getElementById("msg");
  if(v===rooms[gameState.room].answer){
@@ -256,15 +254,14 @@ function submit(){
   setTimeout(()=>loadRoom(gameState.room+1),800);
  }else{
   m.className="message error";
-  m.textContent="Wrong!";
+  m.textContent="Wrong answer!";
  }
  updateSidebar();
 }
 
 function updateSidebar(){
- document.getElementById("hintsUsed").textContent=gameState.hints;
  document.getElementById("progressText").textContent=
-  `${Math.round(gameState.solved.size/3*100)}% Complete`;
+  `${Math.round(gameState.solved.size/rooms.length*100)}%`;
  document.getElementById("evidenceList").innerHTML=
   rooms.map(r=>`<div>${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}</div>`).join("");
 }
