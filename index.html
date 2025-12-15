@@ -99,7 +99,7 @@ evidence:"Confession Evidence",hint:"Use the digits you found in previous rooms"
 function formatTime(s){
 const m=Math.floor(s/60);
 const sec=s%60;
-return ${m}:${sec<10?"0":""}${sec};
+return `${m}:${sec<10?"0":""}${sec}`;
 }
 
 function loadRoom(i){
@@ -109,7 +109,7 @@ gameState.currentRoom=i;
 gameState.timeRemaining=rooms[i].timeLimit;
 
 document.getElementById("roomTitle").textContent=rooms[i].title;
-document.getElementById("roomNumber").textContent=${i+1}/${rooms.length};
+document.getElementById("roomNumber").textContent=`${i+1}/${rooms.length}`;
 document.getElementById("roomContent").innerHTML=`
 <p>${rooms[i].story}</p>
 <div class="visual-clues">
@@ -137,7 +137,7 @@ clearInterval(gameState.timer);
 const d=document.getElementById("timerDisplay");
 gameState.timer=setInterval(()=>{
 if(gameState.timeRemaining>0){gameState.timeRemaining--;}
-d.textContent=⏱ ${formatTime(gameState.timeRemaining)};
+d.textContent=`⏱ ${formatTime(gameState.timeRemaining)}`;
 },1000);
 }
 
@@ -182,7 +182,7 @@ if(roomIndex===0 && clue.label==="Note Found"){
 if(flags.noteRevealed){
 desc.innerHTML="<strong>Revealed note:</strong> Meet at 15:30";
 }else if(flags.uvCooldown>0){
-desc.innerHTML=${clue.description}<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>;
+desc.innerHTML=`${clue.description}<br><br>UV lamp warming: <strong>${flags.uvCooldown}s</strong>`;
 }else{
 desc.textContent=clue.description;
 const btn=document.createElement("button");
@@ -200,7 +200,7 @@ flags.uvCooldown=120;
 const desc=document.getElementById("modalDescription");
 flags.uvInterval=setInterval(()=>{
 flags.uvCooldown--;
-desc.innerHTML=Inspecting... <strong>${flags.uvCooldown}s</strong>;
+desc.innerHTML=`Inspecting... <strong>${flags.uvCooldown}s</strong>`;
 if(flags.uvCooldown<=0){
 clearInterval(flags.uvInterval);
 flags.noteRevealed=true;
@@ -255,8 +255,8 @@ if(sound){sound.currentTime=0;sound.play().catch(()=>{});}
 
 function updateSidebar(){
 document.getElementById("hintsUsed").textContent=gameState.hintsUsed;
-document.getElementById("progressText").textContent=${Math.round(gameState.solved.size/rooms.length*100)}% Complete;
-document.getElementById("evidenceList").innerHTML=rooms.map(r=><div class="evidence-item">${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}</div>).join("");
+document.getElementById("progressText").textContent=`${Math.round(gameState.solved.size/rooms.length*100)}% Complete`;
+document.getElementById("evidenceList").innerHTML=rooms.map(r=>`<div class="evidence-item">${gameState.evidence.has(r.evidence)?"✅":"🔒"} ${r.evidence}</div>`).join("");
 }
 
 function restartGame(){
@@ -267,4 +267,4 @@ loadRoom(0);
 loadRoom(0);
 </script>
 </body>
-</html>
+</html>uv lamp is activating for all the rooms visual clues
