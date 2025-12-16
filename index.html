@@ -133,17 +133,13 @@ button{
 </div>
 
 <script>
-let retryTimeout=null;
-let retryCountdown=null;
-
 const gameState={
   currentRoom:0,
   hintsUsed:0,
   evidence:new Set(),
   timeRemaining:0,
   timer:null,
-  uvRevealed:false,
-  retryTime:0
+  retryTimer:null
 };
 
 const rooms=[
@@ -152,23 +148,25 @@ const rooms=[
   timeLimit:300,
   story:"A diamond vanished. Investigate visual clues.",
   visualClues:[
-    {emoji:"📝",label:"Note Found",description:"Meet at 13:30",uv:true}, 
+    {emoji:"📝",label:"Note Found",description:"Meet at 15:30",uv:true}, 
     {emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
     {emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
     {emoji:"📊",label:"Security Log",description:"Security log is empty"}
   ],
   puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
   evidence:"Security Log Extract",
-  hint:"Check the clock and the note (24-hour format) 🕐📝"
+  hint:"Check the clock and the note 🕐📝 (24-hr format)"
 },
 {
   title:"Room 2: Suspect Interrogation",
   timeLimit:180,
   story:"Study suspects and alibis.",
-  visualClues:[{emoji:"👨",label:"Alex",description:"Left shop at 3:15"},
-               {emoji:"👮",label:"Ben",description:"Watch time mismatched"},
-               {emoji:"👩",label:"Clara",description:"Call forwarded at 3:15"},
-               {emoji:"📹",label:"Camera",description:"Blurred figure in guard jacket"}],
+  visualClues:[
+    {emoji:"👨",label:"Alex",description:"Left shop at 3:15"},
+    {emoji:"👮",label:"Ben",description:"Watch time mismatched"},
+    {emoji:"👩",label:"Clara",description:"Call forwarded at 3:15"},
+    {emoji:"📹",label:"Camera",description:"Blurred figure in guard jacket"}
+  ],
   puzzle:{question:"Who is lying? (Alex, Ben, Clara)",answer:"clara"},
   evidence:"Phone Records",
   hint:"Compare their alibis carefully"
@@ -177,10 +175,12 @@ const rooms=[
   title:"Room 3: The Final Code",
   timeLimit:120,
   story:"Combine everything to unlock the vault.",
-  visualClues:[{emoji:"🏛",label:"Digit 1",description:"One pillar"},
-               {emoji:"⭐",label:"Digit 5",description:"Five-point star"},
-               {emoji:"🔺",label:"Digit 3",description:"Three barriers"},
-               {emoji:"🔐",label:"Digit 0",description:"Round lock"}],
+  visualClues:[
+    {emoji:"🏛",label:"Digit 1",description:"One pillar"},
+    {emoji:"⭐",label:"Digit 5",description:"Five-point star"},
+    {emoji:"🔺",label:"Digit 3",description:"Three barriers"},
+    {emoji:"🔐",label:"Digit 0",description:"Round lock"}
+  ],
   puzzle:{question:"Enter the 4-digit code",answer:"1530"},
   evidence:"Confession Evidence",
   hint:"Use the digits you found in previous rooms"
@@ -199,12 +199,7 @@ function showInstructions(){
   `;
 }
 
-function startGame(){
-  gameState.currentRoom=0;
-  gameState.evidence.clear();
-  gameState.uvRevealed=false;
-  loadRoom(0);
-}
+function startGame(){gameState.currentRoom=0;gameState.evidence.clear();loadRoom(0);}
 
 function loadRoom(i){
   if(i>=rooms.length){showFinalRiddle();return;}
@@ -226,7 +221,7 @@ function loadRoom(i){
       </div>
       <p style="margin-top:20px">${rooms[i].puzzle.question}</p>
       <input id="answerInput">
-      <button id="submitBtn" onclick="submitAnswer()">Submit</button>
+      <button onclick="submitAnswer()">Submit</button>
       <button class="hint-button" onclick="showHint()">💡 Hint</button>
       <div id="hintMsg"></div>
       <div id="message"></div>
@@ -252,30 +247,29 @@ function startTimer(){
 }
 
 function submitAnswer(){
-  if(retryCountdown){return;} // disable submit during countdown
   const v=document.getElementById("answerInput").value.trim().toLowerCase();
   const r=rooms[gameState.currentRoom];
   const m=document.getElementById("message");
-  const submitBtn=document.getElementById("submitBtn");
 
-  if(v===r.puzzle.answer){
+  if(v===r.puzzle.answer.toLowerCase()){
     gameState.evidence.add(r.evidence);
     clearInterval(gameState.timer);
     m.className="message success";
     m.innerHTML=`Correct!<br><button onclick="loadRoom(${gameState.currentRoom+1})">➡ Next</button>`;
   }else{
     m.className="message error";
-    gameState.retryTime=30;
-    submitBtn.disabled=true;
+    let retryTime=30;
+    m.textContent=`Incorrect! Try again in ${retryTime} seconds`;
+    document.getElementById("answerInput").disabled=true;
 
-    retryCountdown=setInterval(()=>{
-      m.textContent=`Incorrect! Try again in ${gameState.retryTime} seconds.`;
-      gameState.retryTime--;
-      if(gameState.retryTime<0){
-        clearInterval(retryCountdown);
-        retryCountdown=null;
+    clearInterval(gameState.retryTimer);
+    gameState.retryTimer=setInterval(()=>{
+      retryTime--;
+      m.textContent=`Incorrect! Try again in ${retryTime} seconds`;
+      if(retryTime<=0){
+        clearInterval(gameState.retryTimer);
         m.textContent="";
-        submitBtn.disabled=false;
+        document.getElementById("answerInput").disabled=false;
       }
     },1000);
   }
@@ -288,24 +282,26 @@ function showHint(){
 
 function openImageModal(idx){
   const clue=rooms[gameState.currentRoom].visualClues[idx];
-  if(gameState.currentRoom===0 && clue.uv && !gameState.uvRevealed){
-    document.getElementById("modalImage").textContent="💡 Waiting 1 min";
-    document.getElementById("modalDescription").textContent="UV lamp reveals this clue after 1 minute.";
+  if(clue.uv && !clue.revealed){
+    // UV lamp: 1 min delay
+    document.getElementById("modalImage").textContent="🕛";
+    document.getElementById("modalDescription").textContent="UV lamp in action... wait 1 min";
     document.getElementById("imageModal").classList.add("active");
     setTimeout(()=>{
+      clue.revealed=true;
       document.getElementById("modalImage").textContent=clue.emoji;
       document.getElementById("modalDescription").textContent=clue.description;
-      gameState.uvRevealed=true;
-    },60000); 
-    return;
+    },60000); // 1 min
+  } else {
+    document.getElementById("modalImage").textContent=clue.emoji;
+    document.getElementById("modalDescription").textContent=clue.description;
+    document.getElementById("imageModal").classList.add("active");
   }
-  document.getElementById("modalImage").textContent=clue.emoji;
-  document.getElementById("modalDescription").textContent=clue.description;
-  document.getElementById("imageModal").classList.add("active");
 }
 
 function closeImageModal(){document.getElementById("imageModal").classList.remove("active");}
 
+/* 🔐 FINAL RIDDLE */
 function showFinalRiddle(){
   document.getElementById("gameContainer").innerHTML=`
     <div class="main-content" style="grid-column:1/-1;text-align:center">
