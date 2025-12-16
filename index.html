@@ -253,14 +253,22 @@ function submitAnswer(){
     m.innerHTML=`Correct!<br><button onclick="loadRoom(${gameState.currentRoom+1})">➡ Next</button>`;
   } else {
     m.className="message error";
-    m.textContent="Incorrect! Try again in 30 seconds.";
+    let waitTime=30;
     input.disabled=true;
     btn.disabled=true;
-    setTimeout(()=>{
-      input.disabled=false;
-      btn.disabled=false;
-      m.textContent=""; // Clear message after 30s
-    },30000);
+
+    const countdown=setInterval(()=>{
+      btn.textContent=`Try again in ${waitTime}s`;
+      waitTime--;
+      if(waitTime<0){
+        clearInterval(countdown);
+        input.disabled=false;
+        btn.disabled=false;
+        btn.textContent="Submit";
+        m.textContent="";
+      }
+    },1000);
+
     gameState.timeRemaining=Math.max(gameState.timeRemaining-30,0);
   }
 }
