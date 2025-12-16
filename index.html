@@ -1,214 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Unsolved Case - Escape Room</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Unsolved Case - Escape Room</title>
 
-  <!-- ================= STYLES (UNCHANGED) ================= -->
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: #e0e0e0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      width: 100%;
-      max-width: 1000px;
-      background: #0f3460;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-      overflow: hidden;
-      display: grid;
-      grid-template-columns: 1fr 300px;
-    }
-    .main-content { padding: 40px; min-height: 600px; display: flex; flex-direction: column; }
-    .sidebar { background: #0a1e35; padding: 30px 20px; border-left: 2px solid #e94560; }
-    header { margin-bottom: 30px; border-bottom: 2px solid #e94560; padding-bottom: 15px; }
-    h1 { color: #e94560; font-size: 28px; }
-    .room-title { color: #16c784; font-size: 18px; }
-    .clue-image { cursor:pointer; }
-    .message.success { color:#16c784; }
-    .message.error { color:#e94560; }
-  </style>
+<style>
+/* ====== STYLES (UNCHANGED) ====== */
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+font-family:'Segoe UI',Tahoma,Verdana,sans-serif;
+background:linear-gradient(135deg,#1a1a2e,#16213e);
+color:#e0e0e0;min-height:100vh;
+display:flex;justify-content:center;align-items:center;padding:20px}
+.container{max-width:1000px;width:100%;background:#0f3460;border-radius:12px;
+display:grid;grid-template-columns:1fr 300px;overflow:hidden}
+.main-content{padding:40px;min-height:600px}
+.sidebar{background:#0a1e35;padding:30px 20px;border-left:2px solid #e94560}
+h1{color:#e94560}
+.room-title{color:#16c784}
+.timer{font-size:24px;font-weight:700;margin-bottom:15px;color:#e94560}
+.visual-clues{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}
+.clue-image{border:2px solid #16c784;border-radius:8px;padding:15px;text-align:center;cursor:pointer}
+.clue-image-content{font-size:60px}
+button{background:#e94560;border:none;padding:10px 15px;color:#fff;border-radius:6px;cursor:pointer}
+.hint-btn{background:#16c784;margin-top:10px;width:100%}
+.message{margin-top:15px;padding:10px;border-radius:6px;text-align:center}
+.message.success{border:2px solid #16c784;color:#16c784}
+.message.error{border:2px solid #e94560;color:#e94560}
+</style>
 </head>
 
 <body>
 
 <div class="container" id="gameContainer">
-  <div class="main-content">
-    <header>
-      <h1>🔍 The Unsolved Case</h1>
-      <p class="room-title" id="roomTitle"></p>
-      <p>Room: <span id="roomNumber"></span> | Hints Used: <span id="hintsUsed">0</span></p>
-    </header>
-    <div id="roomContent"></div>
-  </div>
-
-  <div class="sidebar">
-    <h3>Evidence</h3>
-    <div id="evidenceList"></div>
-  </div>
+<div class="main-content">
+<h1>🔍 The Unsolved Case</h1>
+<p class="room-title" id="roomTitle"></p>
+<div class="timer" id="timerDisplay"></div>
+<div id="roomContent"></div>
 </div>
 
-<!-- ================= IMAGE MODAL ================= -->
-<div id="imageModal" style="display:none;">
-  <div>
-    <button onclick="closeImageModal()">X</button>
-    <div id="modalImage"></div>
-    <div id="modalDescription"></div>
-  </div>
+<div class="sidebar">
+<h3>Progress</h3>
+<div id="progressText">0%</div>
+<h3>Evidence</h3>
+<div id="evidenceList"></div>
+<h3>Suspects</h3>
+<div>🔴 Alex</div>
+<div>🔵 Ben</div>
+<div>🟡 Clara</div>
+</div>
+</div>
+
+<div class="image-modal" id="imageModal" style="display:none;">
+<div>
+<button onclick="closeImageModal()">X</button>
+<div id="modalImage"></div>
+<div id="modalDescription"></div>
+</div>
 </div>
 
 <script>
-/* ================= GAME STATE ================= */
-
-const gameState = {
-  currentRoom: 0,
-  hintsUsed: 0,
-  solvedRooms: new Set(),
-  collectedEvidence: new Set(),
-  cooldownInterval: null,
-  cooldownRemaining: 0
+/* ====== GAME STATE ====== */
+const gameState={
+currentRoom:0,
+hintsUsed:0,
+solvedRooms:new Set(),
+collectedEvidence:new Set(),
+timeRemaining:0,
+timerInterval:null,
+cooldownInterval:null,
+cooldownRemaining:0,
+roomTimeExpired:false,
+roomFlags:{}
 };
 
-/* ================= ROOMS ================= */
-
-const rooms = [
-  {
-    title: "Room 1: The Crime Scene",
-    story: "A precious diamond has been stolen from the museum.",
-    visualClues: [
-      { emoji:"📝", label:"Note Found", description:"Meet at 1_:3_" },
-      { emoji:"🕐", label:"Clock", description:"Clock shows 3:30 PM" }
-    ],
-    puzzle: {
-      question: "What time was the diamond stolen? (HH:MM)",
-      answer: "15:30",
-
-      /* ✅ CHANGED HINT */
-      hint: "Check the clock and the note carefully, and remember to use the 24-hour format."
-    },
-    evidence: "Security Log"
-  },
-  {
-    title: "Room 2: Suspect Interrogation",
-    story: "Three suspects give statements.",
-    visualClues: [
-      { emoji:"👨", label:"Alex", description:"Diamond dealer" },
-      { emoji:"👮", label:"Ben", description:"Security guard" },
-      { emoji:"👩", label:"Clara", description:"Museum curator" }
-    ],
-    puzzle: {
-      question: "Who is lying? (Alex, Ben, Clara)",
-      answer: "clara",
-      hint: "Phone records contradict one statement."
-    },
-    evidence: "Phone Records"
-  },
-  {
-    title: "Room 3: Final Code",
-    story: "Unlock the vault.",
-    visualClues: [
-      { emoji:"🏛", label:"1", description:"One pillar" },
-      { emoji:"⭐", label:"5", description:"Five stars" },
-      { emoji:"🔺", label:"3", description:"Three barriers" },
-      { emoji:"🔐", label:"0", description:"Zero lock" }
-    ],
-    puzzle: {
-      question: "Enter 4-digit code",
-      answer: "1530",
-      hint: "Time without colon."
-    },
-    evidence: "Confession"
-  }
+/* ====== ROOMS ====== */
+const rooms=[
+{
+title:"Room 1: The Crime Scene",
+timeLimit:180,
+story:"A diamond was stolen. Investigate the scene.",
+visualClues:[
+{emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
+{emoji:"🕐",label:"Clock",description:"Clock stopped at 3:30 PM"}
+],
+puzzle:{
+question:"What time was the diamond stolen? (HH:MM)",
+answer:"15:30",
+hint:"Check the clock and the note carefully, and remember to use the 24-hour format."
+},
+evidence:"Security Log"
+},
+{
+title:"Room 2: Suspect Interrogation",
+timeLimit:180,
+story:"One suspect is lying.",
+visualClues:[
+{emoji:"👨",label:"Alex",description:"Claims to be in shop"},
+{emoji:"👮",label:"Ben",description:"Claims to be guarding"},
+{emoji:"👩",label:"Clara",description:"Claims to be in office"}
+],
+puzzle:{
+question:"Who is lying?",
+answer:"clara",
+hint:"One alibi conflicts with records."
+},
+evidence:"Phone Records"
+},
+{
+title:"Room 3: Final Code",
+timeLimit:120,
+story:"Crack the vault.",
+visualClues:[
+{emoji:"🏛",label:"1",description:"One pillar"},
+{emoji:"⭐",label:"5",description:"Five stars"},
+{emoji:"🔺",label:"3",description:"Three barriers"},
+{emoji:"🔐",label:"0",description:"Round lock"}
+],
+puzzle:{
+question:"Enter 4-digit code:",
+answer:"1530",
+hint:"Use the theft time without colon."
+},
+evidence:"Confession"
+}
 ];
 
-/* ================= GAME FUNCTIONS ================= */
-
-function loadRoom() {
-  const room = rooms[gameState.currentRoom];
-  document.getElementById("roomTitle").textContent = room.title;
-  document.getElementById("roomNumber").textContent =
-    `${gameState.currentRoom + 1}/${rooms.length}`;
-
-  document.getElementById("roomContent").innerHTML = `
-    <p>${room.story}</p>
-    <div>
-      ${room.visualClues.map((c,i)=>`
-        <div class="clue-image" onclick="openImageModal(${i})">
-          ${c.emoji} ${c.label}
-        </div>`).join("")}
-    </div>
-    <p>${room.puzzle.question}</p>
-    <input id="answerInput">
-    <button onclick="submitAnswer()">Submit</button>
-    <button onclick="useHint()">Use Hint</button>
-    <div id="message"></div>
-  `;
+/* ====== GAME FUNCTIONS ====== */
+function loadRoom(i){
+if(gameState.timerInterval)clearInterval(gameState.timerInterval);
+gameState.currentRoom=i;
+if(i>=rooms.length){alert("CASE CLOSED");return}
+const r=rooms[i];
+gameState.timeRemaining=r.timeLimit;
+document.getElementById("roomTitle").textContent=r.title;
+document.getElementById("roomContent").innerHTML=`
+<p>${r.story}</p>
+<div class="visual-clues">
+${r.visualClues.map((c,j)=>`
+<div class="clue-image" onclick="openImageModal(${i},${j})">
+<div class="clue-image-content">${c.emoji}</div>
+<div>${c.label}</div>
+</div>`).join("")}
+</div>
+<p>${r.puzzle.question}</p>
+<input id="answerInput">
+<button onclick="submitAnswer()">Submit</button>
+<button class="hint-btn" onclick="useHint()">Hint</button>
+<div id="message"></div>`;
+startTimer();
 }
 
-function submitAnswer() {
-  const input = document.getElementById("answerInput");
-  const msg = document.getElementById("message");
-  const answer = input.value.trim().toLowerCase();
-  const correct = rooms[gameState.currentRoom].puzzle.answer;
-
-  if (answer === correct) {
-    msg.className = "message success";
-    msg.textContent = "✅ Correct!";
-    gameState.collectedEvidence.add(rooms[gameState.currentRoom].evidence);
-    gameState.currentRoom++;
-    if (gameState.currentRoom < rooms.length) {
-      setTimeout(loadRoom, 1000);
-    } else {
-      msg.textContent = "🏆 Case Closed!";
-    }
-  } else {
-    msg.className = "message error";
-    msg.textContent = "❌ Incorrect — try again in 30s.";
-    input.disabled = true;
-
-    /* ✅ COOLDOWN CHANGED TO 30s */
-    gameState.cooldownRemaining = 30;
-    gameState.cooldownInterval = setInterval(() => {
-      gameState.cooldownRemaining--;
-      msg.textContent = `❌ Incorrect — try again in ${gameState.cooldownRemaining}s`;
-      if (gameState.cooldownRemaining <= 0) {
-        clearInterval(gameState.cooldownInterval);
-        input.disabled = false;
-        msg.textContent = "You can try again now.";
-      }
-    }, 1000);
-  }
+function startTimer(){
+gameState.timerInterval=setInterval(()=>{
+gameState.timeRemaining--;
+document.getElementById("timerDisplay").textContent="⏱ "+gameState.timeRemaining;
+if(gameState.timeRemaining<=0){
+clearInterval(gameState.timerInterval);
+loadRoom(gameState.currentRoom+1);
+}
+},1000);
 }
 
-function useHint() {
-  gameState.hintsUsed++;
-  document.getElementById("hintsUsed").textContent = gameState.hintsUsed;
-  document.getElementById("message").textContent =
-    rooms[gameState.currentRoom].puzzle.hint;
+function submitAnswer(){
+const val=document.getElementById("answerInput").value.toLowerCase();
+const r=rooms[gameState.currentRoom];
+const msg=document.getElementById("message");
+
+if(val===r.puzzle.answer){
+msg.className="message success";
+msg.textContent="Correct!";
+setTimeout(()=>loadRoom(gameState.currentRoom+1),800);
+}else{
+msg.className="message error";
+msg.textContent="❌ Incorrect — controls locked for 30s.";
+document.getElementById("answerInput").disabled=true;
+gameState.cooldownRemaining=30;
+
+gameState.cooldownInterval=setInterval(()=>{
+gameState.cooldownRemaining--;
+if(gameState.cooldownRemaining<=0){
+clearInterval(gameState.cooldownInterval);
+document.getElementById("answerInput").disabled=false;
+msg.textContent="Try again.";
+}
+},1000);
+}
 }
 
-function openImageModal(i) {
-  const clue = rooms[gameState.currentRoom].visualClues[i];
-  document.getElementById("modalImage").textContent = clue.emoji;
-  document.getElementById("modalDescription").textContent = clue.description;
-  document.getElementById("imageModal").style.display = "block";
+function useHint(){
+const r=rooms[gameState.currentRoom];
+gameState.timeRemaining=Math.max(0,gameState.timeRemaining-30);
+document.getElementById("message").textContent="💡 "+r.puzzle.hint;
 }
 
-function closeImageModal() {
-  document.getElementById("imageModal").style.display = "none";
+function openImageModal(i,j){
+document.getElementById("imageModal").style.display="block";
+document.getElementById("modalImage").textContent=rooms[i].visualClues[j].emoji;
+document.getElementById("modalDescription").textContent=rooms[i].visualClues[j].description;
+}
+function closeImageModal(){
+document.getElementById("imageModal").style.display="none";
 }
 
-/* ================= INIT ================= */
-loadRoom();
+/* ====== START GAME ====== */
+loadRoom(0);
 </script>
 
 </body>
