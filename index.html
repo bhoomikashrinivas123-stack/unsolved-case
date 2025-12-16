@@ -52,8 +52,15 @@ h1{color:#e94560}
   cursor:pointer;
   transition:.2s;
   position:relative;
+  overflow:hidden;
 }
 .clue-image:hover{border-color:#e94560;transform:scale(1.05)}
+.clue-hidden{
+  display:none;
+  font-size:14px;
+  margin-top:6px;
+  color:#16c784;
+}
 .uv-button{
   position:absolute;
   bottom:10px;
@@ -165,7 +172,7 @@ const rooms=[
   title:"Room 1: The Crime Scene",
   timeLimit:300,
   story:"A diamond vanished. Investigate visual clues.",
-  visualClues:[{emoji:"📝",label:"Note Found",description:"Meet at 1_:3_"},
+  visualClues:[{emoji:"📝",label:"Note Found",description:"Meet at 1_:3_", hidden:"Secret hint revealed by UV lamp: The time is 15:30"},
                {emoji:"🕐",label:"Clock",description:"Clock shows 3:30 PM"},
                {emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
                {emoji:"📊",label:"Security Log",description:"Security log is empty"}],
@@ -229,7 +236,8 @@ function loadRoom(i){
           <div class="clue-image" id="clue-${idx}">
             <div style="font-size:60px">${c.emoji}</div>
             <div>${c.label}</div>
-            ${i===0 && idx===0 && !gameState.uvUsed?'<button class="uv-button" onclick="activateUV()">UV Lamp</button>':''}
+            ${i===0 && idx===0 && !gameState.uvUsed?`<button class="uv-button" onclick="activateUV()">UV Lamp</button>`:''}
+            <div class="clue-hidden" id="hidden-${idx}">${c.hidden || ''}</div>
           </div>`).join("")}
       </div>
       <p style="margin-top:20px">${rooms[i].puzzle.question}</p>
@@ -252,11 +260,11 @@ function loadRoom(i){
 function activateUV(){
   if(gameState.uvUsed) return;
   gameState.uvUsed=true;
-  const clue=document.getElementById("clue-0");
-  clue.classList.add("uv-active");
-  alert("UV Lamp activated! Hidden clue is visible for 1 minute.");
+  const hidden=document.getElementById("hidden-0");
+  hidden.style.display='block';
+  alert("UV Lamp activated! Hidden clue revealed for 1 minute.");
   setTimeout(()=>{
-    clue.classList.remove("uv-active");
+    hidden.style.display='none';
     alert("UV Lamp effect ended.");
   },60000); // 1 minute
 }
