@@ -156,20 +156,28 @@ const gameState={
   waitTime:0
 };
 
+// Function to convert 24-hour to 12-hour
+function to12Hour(hour24){
+  let period = hour24 >= 12 ? 'PM' : 'AM';
+  let hour12 = hour24 % 12;
+  if(hour12 === 0) hour12 = 12;
+  return `${hour12}:30 ${period}`;
+}
+
 const rooms=[
 {
   title:"Room 1: The Crime Scene",
   timeLimit:300,
   story:"A diamond vanished. Investigate visual clues.",
   visualClues:[
-    {emoji:"📝",label:"Note Found",description:"Meet at 13:30", hidden:"The note glows under UV light revealing 'Check clock 15:30'"},
-    {emoji:"🕐",label:"Clock",description:"Clock shows 15:30 PM"},
+    {emoji:"📝",label:"Note Found",description:"Check the note", hidden:"The note glows under UV light revealing 'Check clock 3:30 PM'"},
+    {emoji:"🕐",label:"Clock",description:to12Hour(15)}, // 15:30 in 12-hr format
     {emoji:"🔒",label:"Safe Lock",description:"4-digit safe opened during gap"},
     {emoji:"📊",label:"Security Log",description:"Security log is empty"}
   ],
   puzzle:{question:"What time was the diamond stolen? (HH:MM)",answer:"15:30"},
   evidence:"Security Log Extract",
-  hint:"Check the clock and the note (24-hour) 🕐📝"
+  hint:"Check the clock and the note (12-hour format) 🕐📝"
 },
 {
   title:"Room 2: Suspect Interrogation",
@@ -296,11 +304,12 @@ function openImageModal(idx){
 
 function closeImageModal(){document.getElementById("imageModal").classList.remove("active");}
 
+// Activate UV lamp: reveal hidden clue **after 1 minute**
 function activateUV(){
+  if(gameState.uvUsed) return;
   gameState.uvUsed=true;
   const hidden=document.getElementById("hidden-0");
-  hidden.style.display="block";
-  setTimeout(()=>{hidden.style.display="none";},60000); // 1 min
+  setTimeout(()=>{hidden.style.display="block";},60000); // show after 1 min
 }
 
 /* 🔐 FINAL RIDDLE */
