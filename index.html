@@ -50,9 +50,23 @@ h1{color:#e94560}
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  transition:.2s
+  transition:.2s;
+  position:relative;
 }
 .clue-image:hover{border-color:#e94560;transform:scale(1.05)}
+.uv-button{
+  position:absolute;
+  bottom:10px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:5px 8px;
+  background:#16c784;
+  color:#0f3460;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  font-size:12px;
+}
 .timer{
   border:2px solid #e94560;
   padding:12px;
@@ -117,6 +131,10 @@ button{
   color:#16c784;
 }
 .play-again{margin-top:20px;cursor:pointer;font-size:28px;color:#16c784}
+.uv-active{
+  background: #ffff99 !important;
+  color: #000 !important;
+}
 </style>
 </head>
 
@@ -138,7 +156,8 @@ const gameState={
   hintsUsed:0,
   evidence:new Set(),
   timeRemaining:0,
-  timer:null
+  timer:null,
+  uvUsed:false
 };
 
 const rooms=[
@@ -192,7 +211,7 @@ function showInstructions(){
   `;
 }
 
-function startGame(){gameState.currentRoom=0;gameState.evidence.clear();loadRoom(0);}
+function startGame(){gameState.currentRoom=0;gameState.evidence.clear();gameState.uvUsed=false;loadRoom(0);}
 
 function loadRoom(i){
   if(i>=rooms.length){showFinalRiddle();return;}
@@ -207,9 +226,10 @@ function loadRoom(i){
       <p>${rooms[i].story}</p>
       <div class="visual-clues">
         ${rooms[i].visualClues.map((c,idx)=>`
-          <div class="clue-image" onclick="openImageModal(${idx})">
+          <div class="clue-image" id="clue-${idx}">
             <div style="font-size:60px">${c.emoji}</div>
             <div>${c.label}</div>
+            ${i===0 && idx===0 && !gameState.uvUsed?'<button class="uv-button" onclick="activateUV()">UV Lamp</button>':''}
           </div>`).join("")}
       </div>
       <p style="margin-top:20px">${rooms[i].puzzle.question}</p>
@@ -227,6 +247,18 @@ function loadRoom(i){
     </div>
   `;
   startTimer();
+}
+
+function activateUV(){
+  if(gameState.uvUsed) return;
+  gameState.uvUsed=true;
+  const clue=document.getElementById("clue-0");
+  clue.classList.add("uv-active");
+  alert("UV Lamp activated! Hidden clue is visible for 1 minute.");
+  setTimeout(()=>{
+    clue.classList.remove("uv-active");
+    alert("UV Lamp effect ended.");
+  },60000); // 1 minute
 }
 
 function startTimer(){
